@@ -46,8 +46,14 @@ horovodrun -np $NUM_GPUS python src/pretrain/run_pretrain.py \
 
 ### Text-to-Video Retrieval Finetuning
 
+1. setting for accelerate 
+
 ```bash
-# inside the container
+accelerate config --config_file [path/to/store/config_file] 
+```
+2. running the code 
+
+```bash
 cd ./CLIP-ViP
 bash src/tasks/run.sh
 ```

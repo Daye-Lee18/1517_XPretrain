@@ -381,7 +381,7 @@ class clipvip:
         if self.accelerator.is_main_process:
             # LOGGER.info(self.cfg)
             LOGGER.info("Starting training...")
-        #     LOGGER.info(f"***** Running training with {n_gpu} GPUs *****")
+            LOGGER.info(f"***** Running training with {n_gpu} GPUs *****")
         #     LOGGER.info(f"  Single-GPU Non-Accumulated batch size = {self.cfg.train_batch_size}")
         #     LOGGER.info(f"  max_n_example_per_group = {self.cfg.max_n_example_per_group}")
         #     LOGGER.info(f"  Accumulate steps = {self.cfg.gradient_accumulation_steps}")
