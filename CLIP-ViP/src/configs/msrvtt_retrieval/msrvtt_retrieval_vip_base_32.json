@@ -26,7 +26,7 @@
   "input_res": [224, 224],
   "max_txt_len": 50,
 
-  "e2e_weights_path": "/home/dayelee/XPretrain/CLIP-ViP/pretrain_clipvip_base_32.pt",
+  "e2e_weights_path": "/home/dayelee/1517_XPretrain/CLIP-ViP/pretrain_clipvip_base_32.pt",
   "clip_weights": "openai/clip-vit-base-patch32",
   "clip_config": "openai/clip-vit-base-patch32",
   "clip_vision_additional_config": {

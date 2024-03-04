@@ -176,7 +176,7 @@ class clipvip:
             text_feats = []
             vis_feats = []
             for val_step, batch in enumerate(val_loader):
-                feats = model(**batch)  # dict
+                feats = self.model(**batch)  # dict
                 # print('feats vis_features', feats['vis_features'].shape)
                 # vis_feat = hvd.allgather(feats['vis_features'])
                 # text_feat = hvd.allgather(feats['text_features'])
@@ -389,7 +389,7 @@ class clipvip:
         #                 f"max_n_example_per_group * Accumulate steps [Image] = {total_train_batch_size}")
         #     LOGGER.info(f"  Total #epochs = {self.cfg.num_train_epochs}")
         #     LOGGER.info(f"  Total #steps = {self.cfg.num_train_steps}")
-        #     LOGGER.info(f"  Validate and Save every {self.cfg.valid_steps} steps, in total {actual_num_valid} times")
+            LOGGER.info(f"  Validate and Save every {self.cfg.valid_steps} steps, in total {actual_num_valid} times")
         #     LOGGER.info(f"  Only Validate every {self.cfg.only_valid_steps} steps")
 
     # # quick hack for amp delay_unscale bug
@@ -449,10 +449,11 @@ class clipvip:
                         LOGGER.info(f'Step {step}: loss {loss} lr {lr_} logit_scale {logit_scale_}')
 
                 running_loss(loss.item())
-                
-                self.optim.zero_grad()
                 self.accelerator.backward(loss)
-                self.optim.step()
+                # self.optim.zero_grad()
+                # self.accelerator.backward(loss)
+                # self.optim.step()
+
                 # delay_unscale = (step + 1) % self.cfg.gradient_accumulation_steps != 0
                 # with amp.scale_loss(
                 #         loss, self.optim, delay_unscale=delay_unscale
@@ -463,30 +464,40 @@ class clipvip:
                 #     # self.optim.synchronize()
                     
                 # self.optim
-                # if (step + 1) % self.cfg.gradient_accumulation_steps == 0:
-                #     self.optim.step()
-                #     self.optim.zero_grad()
-                    # global_step += 1
-                    # TB_LOGGER.log_scalar_dict({'vtc_loss': running_loss.val})
-                    # n_epoch = int(1.* self.cfg.gradient_accumulation_steps *
-                    #             global_step / n_steps_in_epoch)
-                    # # learning rate scheduling transformer
-                    # lr_this_step = get_lr_sched(
-                    #     global_step, self.cfg.decay, self.cfg.learning_rate,
-                    #     self.cfg.num_train_steps, warmup_ratio=self.cfg.warmup_ratio,
-                    #     decay_epochs=self.cfg.step_decay_epochs, multi_step_epoch=n_epoch)
+                if (step + 1) % self.cfg.gradient_accumulation_steps == 0:
+                    # self.optim.step()
+                    # self.optim.zero_grad()
+                    if self.cfg.grad_norm != -1:
+                        # `accelerate`에서는 `optimizer.parameters()`에 직접 접근하여 그라디언트 클리핑을 수행합니다.
+                        grad_norm = clip_grad_norm_(self.model.parameters(), self.cfg.grad_norm)
+                        if self.accelerator.is_main_process:
+                            TB_LOGGER.add_scalar("train/grad_norm", grad_norm, global_step)
+                    TB_LOGGER.step()
 
-                    # for pg_n, param_group in enumerate(
-                    #         self.optim.param_groups):
-                    #     if pg_n in [0, 1]:
-                    #         param_group['lr'] = (
-                    #             self.cfg.lr_mul * lr_this_step)
-                    #     elif pg_n in [2, 3]:
-                    #         param_group['lr'] = lr_this_step
+                    self.optim.step()
+                    self.optim.zero_grad()
+
+                    global_step += 1
+                    TB_LOGGER.log_scalar_dict({'vtc_loss': running_loss.val})
+                    n_epoch = int(1.* self.cfg.gradient_accumulation_steps *
+                                global_step / n_steps_in_epoch)
+                    # learning rate scheduling transformer
+                    lr_this_step = get_lr_sched(
+                        global_step, self.cfg.decay, self.cfg.learning_rate,
+                        self.cfg.num_train_steps, warmup_ratio=self.cfg.warmup_ratio,
+                        decay_epochs=self.cfg.step_decay_epochs, multi_step_epoch=n_epoch)
+
+                    for pg_n, param_group in enumerate(
+                            self.optim.param_groups):
+                        if pg_n in [0, 1]:
+                            param_group['lr'] = (
+                                self.cfg.lr_mul * lr_this_step)
+                        elif pg_n in [2, 3]:
+                            param_group['lr'] = lr_this_step
                         
-                    # TB_LOGGER.add_scalar(
-                    #     "train/lr", lr_this_step,
-                    #     global_step)
+                    TB_LOGGER.add_scalar(
+                        "train/lr", lr_this_step,
+                        global_step)
 
                     # # update model params
                     # if self.cfg.grad_norm != -1:
@@ -505,36 +516,39 @@ class clipvip:
                     # with self.optim.skip_synchronize():
                     #     self.optim.step()
                     #     self.optim.zero_grad()
-                    # restorer.step()
+                    restorer.step()
 
                     # TODO: checkpointing 
                     # checkpoint
-        #             if global_step % self.cfg.valid_steps == 0:
-        #                 LOGGER.info(f'Step {global_step}: start validation and Save')
-        #                 _, t2vr1 = validate(model, inference_loaders, self.cfg)
-        #                 model_saver.save(step=global_step, model=model)
-        #                 if hvd.rank() == 0 and self.cfg.if_model_saver and t2vr1 > best_model_saver.bestr1:
-        #                     best_model_saver.save(step=global_step, model=model)
-        #                     best_model_saver.bestr1 = t2vr1
-        #             else:
-        #                 if global_step % self.cfg.only_valid_steps == 0:
-        #                     LOGGER.info(f'Step {global_step}: start inference')
-        #                     _, t2vr1 = validate(model, inference_loaders, self.cfg)
-        #                     if hvd.rank() == 0 and self.cfg.if_model_saver and t2vr1 > best_model_saver.bestr1:
-        #                         best_model_saver.save(step=global_step, model=model)
-        #                         best_model_saver.bestr1 = t2vr1
+                    if global_step % self.cfg.valid_steps == 0:
+                        LOGGER.info(f'Step {global_step}: start validation and Save')
+                        _, t2vr1 = self.validate(inference_loaders)
+                        model_saver.save(step=global_step, model=self.model)
+                        # if hvd.rank() == 0 and self.cfg.if_model_saver and t2vr1 > best_model_saver.bestr1:
+                        if self.accelerator.is_main_process and self.cfg.if_model_saver and t2vr1 > best_model_saver.bestr1:
+                            best_model_saver.save(step=global_step, model=self.model)
+                            best_model_saver.bestr1 = t2vr1
+                    else:
+                        if global_step % self.cfg.only_valid_steps == 0:
+                            LOGGER.info(f'Step {global_step}: start inference')
+                            _, t2vr1 = self.validate(inference_loaders)
+                            # if hvd.rank() == 0 and self.cfg.if_model_saver and t2vr1 > best_model_saver.bestr1:
+                            if self.accelerator.is_main_process and self.cfg.if_model_saver and t2vr1 > best_model_saver.bestr1:
+                                best_model_saver.save(step=global_step, model=self.model)
+                                best_model_saver.bestr1 = t2vr1
 
-        #         if global_step >= self.cfg.num_train_steps:
-        #             break
+                if global_step >= self.cfg.num_train_steps:
+                    break
 
-        # if global_step % self.cfg.valid_steps != 0:
-        #     LOGGER.info(f'Step {global_step}: start validation')
-        #     _, t2vr1 = validate(model, inference_loaders, self.cfg)
+        if global_step % self.cfg.valid_steps != 0:
+            LOGGER.info(f'Step {global_step}: start validation')
+            _, t2vr1 = self.validate(inference_loaders)
 
-        #     model_saver.save(step=global_step, model=model)
-        #     if hvd.rank() == 0 and self.cfg.if_model_saver and t2vr1 > best_model_saver.bestr1:
-        #         best_model_saver.save(step=global_step, model=model)
-        #         best_model_saver.bestr1 = t2vr1
+            model_saver.save(step=global_step, model=self.model)
+            # if hvd.rank() == 0 and self.cfg.if_model_saver and t2vr1 > best_model_saver.bestr1:
+            if self.accelerator.is_main_process and self.cfg.if_model_saver and t2vr1 > best_model_saver.bestr1:
+                best_model_saver.save(step=global_step, model=self.model)
+                best_model_saver.bestr1 = t2vr1
 
 
 if __name__ == '__main__':
