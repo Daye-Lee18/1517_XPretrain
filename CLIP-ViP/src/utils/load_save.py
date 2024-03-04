@@ -5,7 +5,7 @@ import json
 import os
 from os.path import dirname, exists, join, realpath
 import subprocess
-from apex import amp
+# from apex import amp
 from easydict import EasyDict as edict
 
 import torch

@@ -132,8 +132,9 @@ class NCELearnableTempLoss(nn.Module):
         super(NCELearnableTempLoss, self).__init__()
 
     def forward(self, vis_feat, text_feat, temp):
+        
         logit_scale = temp.exp()
-        t2v = torch.matmul(vis_feat, text_feat.permute(1, 0)) * logit_scale  # temperature
+        t2v = torch.matmul(vis_feat, text_feat.permute(1, 0)) * logit_scale  # temperature # bs x bs 
         v2t = t2v.permute(1, 0)
         t2v_label = torch.arange(t2v.shape[0], device=t2v.device)
         v2t_label = t2v_label

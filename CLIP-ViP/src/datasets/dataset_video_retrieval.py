@@ -8,7 +8,7 @@ from src.utils.logger import LOGGER
 from src.utils.basic_utils import flat_list_of_lists
 from src.datasets.data_utils import mask_batch_text_tokens, img_collate
 from src.datasets.dataloader import init_transform_dict, init_transform_dict_simple
-import decord
+import decord # video loader 
 from decord import VideoReader
 from decord import cpu, gpu
 decord.bridge.set_bridge("torch")
@@ -129,13 +129,21 @@ class HDVILAVideoRetrievalDataset(Dataset):
             texts = ["This is a dummy sentence, which contains nothing meaningful."]
         )
 
-        vis_id = self.datalist[index]['clip_id']
-        texts = self.datalist[index]['text']
+        # vis_id = self.datalist[index]['clip_id']
+        # texts = self.datalist[index]['text']
+        vis_id = self.datalist[index]['video_id']
+        texts = self.datalist[index]['desc']
 
+        # if isinstance(texts, list):
+        #     texts = random.sample(self.datalist[index]['text'], self.pos_num)
+        #     if 'didemo' in self.anno_path:
+        #         texts = [' '.join(self.datalist[index]['text'])]
+        # else:
+        #     texts = [texts]
         if isinstance(texts, list):
-            texts = random.sample(self.datalist[index]['text'], self.pos_num)
+            texts = random.sample(self.datalist[index]['desc'], self.pos_num)
             if 'didemo' in self.anno_path:
-                texts = [' '.join(self.datalist[index]['text'])]
+                texts = [' '.join(self.datalist[index]['desc'])]
         else:
             texts = [texts]
         

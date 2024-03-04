@@ -9,57 +9,57 @@ import random
 import torch
 from torchvision import transforms
 from torch.utils.data import DataLoader
-from src.utils.distributed import any_broadcast
+# from src.utils.distributed import any_broadcast
 
 
-class MetaLoader(object):
-    """ wraps multiple data loader """
-    def __init__(self, loaders, accum_steps=1, distributed=False, epoch=2):
-        assert isinstance(loaders, dict)
-        self.name2loader = {}
-        self.name2iter = {}
-        self.name2epoch = {}
-        self.sampling_pools = []
-        n_batches_in_epoch = 0
-        for n, l in loaders.items():
-            if isinstance(l, tuple):
-                l, r = l
-            elif isinstance(l, DataLoader):
-                r = 1
-            else:
-                raise ValueError()
-            n_batches_in_epoch += len(l.dataset) * r / l.batch_size
-            self.name2loader[n] = l
-            self.name2epoch[n] = epoch
-            self.name2loader[n].sampler.set_epoch(self.name2epoch[n])
-            self.name2iter[n] = iter(l)
-            self.sampling_pools.extend([n]*r)
-        self.n_batches_in_epoch = n_batches_in_epoch
-        self.accum_steps = accum_steps
-        self.distributed = distributed
-        self.step = 0
+# class MetaLoader(object):
+#     """ wraps multiple data loader """
+#     def __init__(self, loaders, accum_steps=1, distributed=False, epoch=2):
+#         assert isinstance(loaders, dict)
+#         self.name2loader = {}
+#         self.name2iter = {}
+#         self.name2epoch = {}
+#         self.sampling_pools = []
+#         n_batches_in_epoch = 0
+#         for n, l in loaders.items():
+#             if isinstance(l, tuple):
+#                 l, r = l
+#             elif isinstance(l, DataLoader):
+#                 r = 1
+#             else:
+#                 raise ValueError()
+#             n_batches_in_epoch += len(l.dataset) * r / l.batch_size
+#             self.name2loader[n] = l
+#             self.name2epoch[n] = epoch
+#             self.name2loader[n].sampler.set_epoch(self.name2epoch[n])
+#             self.name2iter[n] = iter(l)
+#             self.sampling_pools.extend([n]*r)
+#         self.n_batches_in_epoch = n_batches_in_epoch
+#         self.accum_steps = accum_steps
+#         self.distributed = distributed
+#         self.step = 0
 
-    def __iter__(self):
-        """ this iterator will run indefinitely """
-        task = self.sampling_pools[0]
-        while True:
-            if self.step % self.accum_steps == 0:
-                task = random.choice(self.sampling_pools)
-                if self.distributed:
-                    # make sure all process is training same task
-                    task = any_broadcast(task, 0)
-            self.step += 1
-            iter_ = self.name2iter[task]
-            try:
-                batch = next(iter_)
-            except StopIteration:
-                self.name2epoch[task] += 1
-                self.name2loader[task].sampler.set_epoch(self.name2epoch[task])
-                iter_ = iter(self.name2loader[task])
-                batch = next(iter_)
-                self.name2iter[task] = iter_
+#     def __iter__(self):
+#         """ this iterator will run indefinitely """
+#         task = self.sampling_pools[0]
+#         while True:
+#             if self.step % self.accum_steps == 0:
+#                 task = random.choice(self.sampling_pools)
+#                 if self.distributed:
+#                     # make sure all process is training same task
+#                     task = any_broadcast(task, 0)
+#             self.step += 1
+#             iter_ = self.name2iter[task]
+#             try:
+#                 batch = next(iter_)
+#             except StopIteration:
+#                 self.name2epoch[task] += 1
+#                 self.name2loader[task].sampler.set_epoch(self.name2epoch[task])
+#                 iter_ = iter(self.name2loader[task])
+#                 batch = next(iter_)
+#                 self.name2iter[task] = iter_
 
-            yield task, batch
+#             yield task, batch
 
 
 def move_to_cuda(batch):
