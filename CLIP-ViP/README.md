@@ -33,23 +33,6 @@ We use mixed-precision training hence GPUs with Tensor Cores are recommended.
 
     CLIP-ViP-B/16: [Azure Blob Link](https://hdvila.blob.core.windows.net/dataset/pretrain_clipvip_base_16.pt?sp=r&st=2023-03-16T05:02:05Z&se=2026-07-31T13:02:05Z&spr=https&sv=2021-12-02&sr=b&sig=XNd7fZSsUhW7eesL3hTfYUMiAvCCN3Bys2TadXlWzFU%3D)
 
-3. Set up the environment for running the experiments.
-
-    Create a folder that stores pretrained models, all the data, and results.
-    ```bash
-    PATH_TO_STORAGE=/path/to/your/data/
-    ```
-    Clone this repo and launch the Docker container for running the experiments. 
-    If you want to pre-train on your own dataset, please prepare the environment with `horovod`. It is a better choice to use the pre-built docker image `tiankaihang/azureml_docker:horovod`. Or you can build from the [dockerfile](./docker/Dockerfile).
-    We use mixed-precision training hence GPUs with Tensor Cores are recommended.
-    ```bash
-    # command to get into the container, docker image should be automatically pulled.
-    cd HD-VILA
-    source launch_container.sh $PATH_TO_STORAGE
-    # update the transformers package
-    pip install --upgrade transformers
-    ```
-
 
 ### Pre-training
 
@@ -65,8 +48,8 @@ horovodrun -np $NUM_GPUS python src/pretrain/run_pretrain.py \
 
 ```bash
 # inside the container
-horovodrun -np $NUM_GPUS python src/tasks/run_video_retrieval.py \
-    --config $CONFIG_PATH 
+cd ./CLIP-ViP
+bash src/tasks/run.sh
 ```
 
 `$CONFIG_PATH` should be set to one of the .json config files available at [src/configs](src/configs) postfixed with `_retrieval.json`. For example, you can use `src/configs/msrvtt_retrieval/msrvtt_retrieval_vip_base_32.json` for finetuning CLIP-ViP-B/32 on MSRVTT retrieval. For model, currently, `pretrain_vip_base_32.json` and `pretrain_vip_base_16.json` are supported. For dataset, MSR-VTT, DiDemo, LSMDC, ActivityNet Captions are supported.
