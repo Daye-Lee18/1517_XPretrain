@@ -46,12 +46,20 @@ horovodrun -np $NUM_GPUS python src/pretrain/run_pretrain.py \
 
 ### Text-to-Video Retrieval Finetuning
 
-1. setting for accelerate 
+1. setting for accelerate (only at the first time)
 
 ```bash
 accelerate config --config_file [path/to/store/config_file] 
 ```
-2. running the code 
+
+2. wandb setting 
+
+```bash
+wandb login 
+wandb online
+```
+
+3. running the code 
 
 ```bash
 cd ./CLIP-ViP
