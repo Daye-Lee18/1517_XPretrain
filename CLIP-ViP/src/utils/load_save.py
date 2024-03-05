@@ -63,13 +63,19 @@ class ModelSaver(object):
                 save_trial += 1
 
 class BestModelSaver(object):
-    def __init__(self, output_dir):
+    def __init__(self, output_dir, epoch):
         self.output_dir = output_dir
         self.max_save_load_trial = 10
         self.bestr1 = 0
+        self.epoch = epoch
 
     def save(self, step, model, prefix="model_best"):
-        model_path = join(self.output_dir, f"{prefix}.pt")
+        save_dir = join(self.output_dir, "_", str(self.epoch))
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+        # model_path = join(self.output_dir, f"{prefix}.pt")
+        model_path = join(save_dir, f"{prefix}.pt")
+
         state_dict = {k: v.cpu() if isinstance(v, torch.Tensor) else v
                       for k, v in model.state_dict().items()}
         # with retrial, as azure blob fails occasionally.

@@ -372,7 +372,7 @@ class clipvip:
             # pbar = tqdm(total=self.cfg.num_train_steps)
             if self.cfg.if_model_saver:
                 model_saver = ModelSaver(join(self.cfg.output_dir, "ckpt"))
-                best_model_saver = BestModelSaver(join(self.cfg.output_dir, "ckpt"))
+                best_model_saver = BestModelSaver(join(self.cfg.output_dir, "ckpt"), self.cfg.num_train_epochs)
             else:
                 model_saver = NoOp()
                 restorer = NoOp()

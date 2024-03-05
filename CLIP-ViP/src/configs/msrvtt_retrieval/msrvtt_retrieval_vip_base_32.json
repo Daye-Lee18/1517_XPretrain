@@ -3,16 +3,16 @@
     {
       "name": "msrvtt-7k",
       "vis_format": "video",
-      "txt": "/home/dayelee/msrvtt/annotations/msrvtt/descs_cap_train.json",
-      "vis": "/data/msrvtt/TrainValVideo"
+      "txt": "/home/dayelee/1517_XPretrain/CLIP-ViP/data/msrvtt/annotations/msrvtt_ret_train9k.json",
+      "vis": "/home/dayelee/clipvip/videos_6fps"
     },
   
   "inference_datasets": [
     {
       "name": "msrvtt-1ka",
       "vis_format": "video",
-      "txt": "/home/dayelee/msrvtt/annotations/msrvtt/descs_cap_test.json",
-      "vis": "/data/msrvtt/TestVideo"
+      "txt": "/home/dayelee/1517_XPretrain/CLIP-ViP/data/msrvtt/annotations/msrvtt_test68_e.json",
+      "vis": "/home/dayelee/clipvip/videos_6fps"
     }
   ],
 
@@ -38,7 +38,7 @@
   },
 
   "train_batch_size": 128,
-  "test_batch_size": 128,
+  "test_batch_size": 32,
   "max_n_example_per_group": 1,
   "gradient_accumulation_steps": 1,
   "n_workers": 8,
@@ -61,7 +61,7 @@
   "decay": "cosine",
   "grad_norm": 1.0,
 
-  "num_train_epochs": 100,
+  "num_train_epochs": 5,
   "min_valid_steps": 1,
   "num_valid": 1,
   "only_valid_steps": 100,

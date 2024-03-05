@@ -1,1 +1,5 @@
 *.pt
+wandb/
+*.pyc
+test.py
+data_study.py
