@@ -132,14 +132,14 @@ class HDVILAVideoRetrievalDataset(Dataset):
         # vis_id = self.datalist[index]['clip_id']
         # texts = self.datalist[index]['text']
         if not ("video_id" in self.datalist[index].keys()):
-            video = file_dict["video"]
+            video = self.datalist[index]["video"]
             video_id, _ = os.path.splitext(video)
             vis_id = video_id
             texts = self.datalist[index]['caption']
         else:
             vis_id = self.datalist[index]['video_id']
-            texts = self.datalist[index]['desc']
-
+            texts = self.datalist[index]['caption']
+        
         # if isinstance(texts, list):
         #     texts = random.sample(self.datalist[index]['text'], self.pos_num)
         #     if 'didemo' in self.anno_path:
@@ -148,14 +148,14 @@ class HDVILAVideoRetrievalDataset(Dataset):
         #     texts = [texts]
 
         if isinstance(texts, list):
-            texts = random.sample(self.datalist[index]['desc'], self.pos_num)
+            texts = random.sample(self.datalist[index]['caption'], self.pos_num)
             if 'didemo' in self.anno_path:
-                texts = [' '.join(self.datalist[index]['desc'])]
+                texts = [' '.join(self.datalist[index]['caption'])]
         else:
             texts = [texts]
         
         vis_path = self.id2path(vis_id)
-        video = self.load_video(vis_path) if self.vis_format=='video' else self.load_frames(vis_path, self.datalist[index]['num_frame'])
+        video = self.load_video(vis_path) if self.vis_format=='video' else self.load_frames(vis_path, self.datalist[index]['num_frame'])     
 
         return dict(
             video = video,  # [clips*num_frm, C, H_crop, W_crop]

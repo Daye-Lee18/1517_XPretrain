@@ -247,7 +247,7 @@ class clipvip:
                             f"{loader_name} v2t recall_mean: {val_log['valid/%s_v2t_recall_mean'%(loader_name)] :.1f} "
                             )
             TB_LOGGER.log_scalar_dict(val_log)
-            import pdb; pdb.set_trace() 
+            # import pdb; pdb.set_trace() 
         self.model.train()
         return val_log, t2vr1
     
@@ -273,6 +273,16 @@ class clipvip:
         for db in self.cfg.inference_datasets:
             db.txt = os.path.join(self.cfg.blob_mount_dir, db.txt)
             db.vis = os.path.join(self.cfg.blob_mount_dir, db.vis)
+    def make_dir(self):
+        save_dir = self.cfg.output_dir
+        i = 1 
+        while os.path.exists(save_dir):
+            path_name = "epoch_" + str(self.cfg.num_train_epochs) + "_bs_" + str(self.cfg.train_batch_size)+ "_lr_" + str(self.cfg.learning_rate) + "_" + str(i)
+            save_dir = join(self.cfg.output_dir, path_name)
+            i += 1 
+        os.makedirs(save_dir)
+
+        return save_dir 
 
 
     def start_training(self):
@@ -368,18 +378,24 @@ class clipvip:
             save_training_meta(self.cfg)
             LOGGER.info("Saving training done...")
             if self.cfg.if_tb_log:
-                TB_LOGGER.create(join(self.cfg.output_dir, 'log'))
+                # TB_LOGGER.create(join(self.cfg.output_dir, 'log'))
+                save_dir = self.make_dir()
+                TB_LOGGER.create(join(save_dir, 'log'))
             # pbar = tqdm(total=self.cfg.num_train_steps)
             if self.cfg.if_model_saver:
-                model_saver = ModelSaver(join(self.cfg.output_dir, "ckpt"))
-                best_model_saver = BestModelSaver(join(self.cfg.output_dir, "ckpt"), self.cfg.num_train_epochs)
+                model_saver = ModelSaver(join(self.cfg.output_dir, "ckpt"), self.cfg)
+                best_model_saver = BestModelSaver(join(self.cfg.output_dir, "ckpt"), self.cfg)
             else:
                 model_saver = NoOp()
                 restorer = NoOp()
                 best_model_saver = NoOp()
                 
             if self.cfg.if_log2file:
-                add_log_to_file(join(self.cfg.output_dir, "log", "log.txt"))
+                save_dir = self.make_dir()
+                # add_log_to_file(join(self.cfg.output_dir, "log", "log.txt"))
+                if not os.path.exists(join(save_dir, "log")):
+                    os.makedirs(join(save_dir, "log"))
+                add_log_to_file(join(save_dir, "log", "log.txt"))
         else:
             LOGGER.disabled = True
             # pbar = NoOp()
@@ -573,7 +589,13 @@ if __name__ == '__main__':
     # Initialize Horovod
     # hvd.init()
     cfg = shared_configs.get_pretraining_args()
-    model = clipvip(cfg)
-    model.start_training()
+    if cfg.is_train:
+        model = clipvip(cfg)
+        model.start_training()
+    else:
+        model = clipvip(cfg)
+        _, t2vr1 = model.validate(inference_loaders)
+
+
 
 # CUDA_VISIBLE_DEVICES=2,3 horovodrun -np 2 python src/tasks/run_video_retrieval.py --config src/configs/msrvtt_retrieval_debug.json  --blob_mount_dir /blob_mount/

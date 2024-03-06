@@ -107,6 +107,7 @@ class SharedConfigs(object):
                             help="randomly sample clips for training, otherwise use uniformly sampled clips.")
 
         # training parameters
+        parser.add_argument("--is_train", action='store_true', help="is this for finetuning or pretraining")
         parser.add_argument(
             "--train_batch_size", default=128, type=int,
             help="Single-GPU batch size for training for Horovod.")

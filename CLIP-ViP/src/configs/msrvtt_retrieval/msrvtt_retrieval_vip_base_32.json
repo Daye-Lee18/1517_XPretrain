@@ -3,7 +3,7 @@
     {
       "name": "msrvtt-7k",
       "vis_format": "video",
-      "txt": "/home/dayelee/1517_XPretrain/CLIP-ViP/data/msrvtt/annotations/msrvtt_ret_train9k.json",
+      "txt": "/home/dayelee/1517_XPretrain/CLIP-ViP/data/msrvtt/annotations/msrvtt_ret_train7k.json",
       "vis": "/home/dayelee/clipvip/videos_6fps"
     },
   
@@ -11,11 +11,11 @@
     {
       "name": "msrvtt-1ka",
       "vis_format": "video",
-      "txt": "/home/dayelee/1517_XPretrain/CLIP-ViP/data/msrvtt/annotations/msrvtt_test68_e.json",
+      "txt": "/home/dayelee/1517_XPretrain/CLIP-ViP/data/msrvtt/annotations/msrvtt_ret_test1k.json",
       "vis": "/home/dayelee/clipvip/videos_6fps"
     }
   ],
-
+  "is_train": false,
   "train_n_clips": 1,
   "train_num_frms": 12,
   "test_n_clips": 1,
@@ -36,9 +36,9 @@
       "logit_scale_init_value": 4.60,
       "add_cls_num": 3
   },
-
-  "train_batch_size": 128,
-  "test_batch_size": 32,
+  
+  "train_batch_size": 16,
+  "test_batch_size": 16,
   "max_n_example_per_group": 1,
   "gradient_accumulation_steps": 1,
   "n_workers": 8,
