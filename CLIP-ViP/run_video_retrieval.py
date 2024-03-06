@@ -553,6 +553,7 @@ class clipvip:
                     if global_step % self.cfg.valid_steps == 0:
                         LOGGER.info(f'Step {global_step}: start validation and Save')
                         _, t2vr1 = self.validate(inference_loaders)
+                        
                         model_saver.save(step=global_step, model=self.model)
                         wandb.log({"val_loss": t2vr1}, step = step)
                         # if hvd.rank() == 0 and self.cfg.if_model_saver and t2vr1 > best_model_saver.bestr1:

@@ -3,16 +3,16 @@
     {
       "name": "msrvtt-7k",
       "vis_format": "video",
-      "txt": "/home/dayelee/1517_XPretrain/CLIP-ViP/data/msrvtt/annotations/msrvtt_ret_train7k.json",
-      "vis": "/home/dayelee/clipvip/videos_6fps"
+      "txt": "/home/s2/dayelee/1517_XPretrain/CLIP-ViP/data/msrvtt/annotations/msrvtt_ret_train7k.json",
+      "vis": "/home/s2/dayelee/clipvip/msrvtt/videos_6fps"
     },
   
   "inference_datasets": [
     {
       "name": "msrvtt-1ka",
       "vis_format": "video",
-      "txt": "/home/dayelee/1517_XPretrain/CLIP-ViP/data/msrvtt/annotations/msrvtt_ret_test1k.json",
-      "vis": "/home/dayelee/clipvip/videos_6fps"
+      "txt": "/home/s2/dayelee/1517_XPretrain/CLIP-ViP/data/msrvtt/annotations/msrvtt_ret_test1k.json",
+      "vis": "/home/s2/dayelee/clipvip/msrvtt/videos_6fps"
     }
   ],
   "is_train": false,
@@ -26,7 +26,7 @@
   "input_res": [224, 224],
   "max_txt_len": 50,
 
-  "e2e_weights_path": "/home/dayelee/1517_XPretrain/CLIP-ViP/pretrain_clipvip_base_32.pt",
+  "e2e_weights_path": "/home/s2/dayelee/1517_XPretrain/CLIP-ViP/pretrain_clipvip_base_32.pt",
   "clip_weights": "openai/clip-vit-base-patch32",
   "clip_config": "openai/clip-vit-base-patch32",
   "clip_vision_additional_config": {
@@ -66,7 +66,7 @@
   "num_valid": 1,
   "only_valid_steps": 100,
   "save_steps_ratio": 0.9,
-  "output_dir": "/data/msrvtt/output_log",
+  "output_dir": "/home/s2/dayelee/clipvip/msrvtt/output_log",
   "if_tb_log": 0,
   "if_model_saver": 1,
   "if_log2file": 1,
