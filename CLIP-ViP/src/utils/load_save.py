@@ -35,30 +35,95 @@ def save_training_meta(args):
     LOGGER.info(f"Saving code done.")
 
 
+# class ModelSaver(object):
+#     def __init__(self, output_dir, cfg):
+#         self.output_dir = output_dir
+#         self.max_save_load_trial = 10
+#         self.cfg = cfg 
+    
+#     def make_dir(self):
+#         save_dir = self.cfg.output_dir
+#         i = 1 
+#         while os.path.exists(save_dir):
+#             path_name = "epoch_" + str(self.cfg.num_train_epochs) + "_bs_" + str(self.cfg.train_batch_size)+ "_lr_" + str(self.cfg.learning_rate) + "_" + str(i)
+#             save_dir = join(self.cfg.output_dir, path_name)
+#             i += 1 
+#         os.makedirs(save_dir)
+
+#         return save_dir 
+
+#     def save(self, step, model, optimizer=None, prefix="model"):
+#         # model_path = join(self.output_dir, f"{prefix}_step_{step}.pt")
+#         ##########
+#         save_dir = self.make_dir()
+#         model_path = join(save_dir,f"{prefix}_step_{step}.pt")
+#         #########
+        
+#         state_dict = {k: v.cpu() if isinstance(v, torch.Tensor) else v
+#                       for k, v in model.state_dict().items()}
+#         # with retrial, as azure blob fails occasionally.
+#         save_trial = 0
+#         while save_trial < self.max_save_load_trial:
+#             try:
+#                 LOGGER.info(f"ModelSaver save trial NO. {save_trial}")
+#                 torch.save(state_dict, model_path)
+#                 if optimizer is not None:
+#                     optimizer_state_dict = \
+#                         {k: v.cpu() if isinstance(v, torch.Tensor) else v
+#                          for k, v in optimizer.state_dict().items()}
+#                     dump = {'step': step, 'optimizer': optimizer_state_dict}
+#                     torch.save(
+#                         dump,
+#                         f'{self.output_dir}/{prefix}_step_{step}_train_state.pt')
+#                 break
+#             except Exception as e:
+#                 save_trial += 1
+
+# class BestModelSaver(object):
+#     def __init__(self, output_dir, cfg):
+#         self.output_dir = output_dir
+#         self.max_save_load_trial = 10
+#         self.bestr1 = 0
+#         self.cfg = cfg
+    
+    # def make_dir(self):
+    #     save_dir = self.cfg.output_dir
+    #     i = 1 
+    #     while os.path.exists(save_dir):
+    #         path_name = "epoch_" + str(self.cfg.num_train_epochs) + "_bs_" + str(self.cfg.train_batch_size)+ "_lr_" + str(self.cfg.learning_rate) + "_" + str(i)
+    #         save_dir = join(self.cfg.output_dir, path_name)
+    #         i += 1 
+    #     os.makedirs(save_dir)
+
+    #     return save_dir 
+
+
+    # def save(self, step, model, prefix="model_best"):
+    #     ##########
+    #     save_dir = self.make_dir()
+    #     # model_path = join(self.output_dir, f"{prefix}.pt")
+    #     model_path = join(save_dir, f"{prefix}.pt")
+    #     #########
+
+    #     state_dict = {k: v.cpu() if isinstance(v, torch.Tensor) else v
+    #                   for k, v in model.state_dict().items()}
+    #     # with retrial, as azure blob fails occasionally.
+    #     save_trial = 0
+    #     while save_trial < self.max_save_load_trial:
+    #         try:
+    #             LOGGER.info(f"BestModelSaver save trial NO. {save_trial}")
+    #             torch.save(state_dict, model_path)
+    #             break
+    #         except Exception as e:
+    #             save_trial += 1
+
 class ModelSaver(object):
-    def __init__(self, output_dir, cfg):
+    def __init__(self, output_dir):
         self.output_dir = output_dir
         self.max_save_load_trial = 10
-        self.cfg = cfg 
-    
-    def make_dir(self):
-        save_dir = self.cfg.output_dir
-        i = 1 
-        while os.path.exists(save_dir):
-            path_name = "epoch_" + str(self.cfg.num_train_epochs) + "_bs_" + str(self.cfg.train_batch_size)+ "_lr_" + str(self.cfg.learning_rate) + "_" + str(i)
-            save_dir = join(self.cfg.output_dir, path_name)
-            i += 1 
-        os.makedirs(save_dir)
-
-        return save_dir 
 
     def save(self, step, model, optimizer=None, prefix="model"):
-        # model_path = join(self.output_dir, f"{prefix}_step_{step}.pt")
-        ##########
-        save_dir = self.make_dir()
-        model_path = join(save_dir,f"{prefix}_step_{step}.pt")
-        #########
-        
+        model_path = join(self.output_dir, f"{prefix}_step_{step}.pt")
         state_dict = {k: v.cpu() if isinstance(v, torch.Tensor) else v
                       for k, v in model.state_dict().items()}
         # with retrial, as azure blob fails occasionally.
@@ -80,31 +145,13 @@ class ModelSaver(object):
                 save_trial += 1
 
 class BestModelSaver(object):
-    def __init__(self, output_dir, cfg):
+    def __init__(self, output_dir):
         self.output_dir = output_dir
         self.max_save_load_trial = 10
         self.bestr1 = 0
-        self.cfg = cfg
-    
-    def make_dir(self):
-        save_dir = self.cfg.output_dir
-        i = 1 
-        while os.path.exists(save_dir):
-            path_name = "epoch_" + str(self.cfg.num_train_epochs) + "_bs_" + str(self.cfg.train_batch_size)+ "_lr_" + str(self.cfg.learning_rate) + "_" + str(i)
-            save_dir = join(self.cfg.output_dir, path_name)
-            i += 1 
-        os.makedirs(save_dir)
-
-        return save_dir 
-
 
     def save(self, step, model, prefix="model_best"):
-        ##########
-        save_dir = self.make_dir()
-        # model_path = join(self.output_dir, f"{prefix}.pt")
-        model_path = join(save_dir, f"{prefix}.pt")
-        #########
-
+        model_path = join(self.output_dir, f"{prefix}.pt")
         state_dict = {k: v.cpu() if isinstance(v, torch.Tensor) else v
                       for k, v in model.state_dict().items()}
         # with retrial, as azure blob fails occasionally.

@@ -68,6 +68,13 @@ bash src/tasks/run.sh
 
 `$CONFIG_PATH` should be set to one of the .json config files available at [src/configs](src/configs) postfixed with `_retrieval.json`. For example, you can use `src/configs/msrvtt_retrieval/msrvtt_retrieval_vip_base_32.json` for finetuning CLIP-ViP-B/32 on MSRVTT retrieval. For model, currently, `pretrain_vip_base_32.json` and `pretrain_vip_base_16.json` are supported. For dataset, MSR-VTT, DiDemo, LSMDC, ActivityNet Captions are supported.
 
+4. test the code 
+
+```bash
+accelerate launch --config_file /home/s2/dayelee/accel.yaml ./run_video_retrieval_val.py --config /home/s2/dayelee/1517_XPretrain/CLIP-ViP/src/configs/msrvtt_retrieval/msrvtt_retrieval_vip_base_32.json --blob_mount_dir /home/s2/dayelee --num_train_epochs 5 --output_dir /shared/s2/lab01/dayelee_store/checkpoints/msrvtt --train_batch_size 8 --e2e_weights_path /home/s2/dayelee/dayelee_store/checkpoints/msrvtt_16_gpu_2/epoch_5_bs_16_lr_1e-06_31/model_best.pt
+```
+
+make sure that you **do not** use `--is_train` and enter the `--e2e_weights_path` for loading a model checkpoint 
 
 ## Citation
 If you find the code and pre-trained models useful for your research, please consider citing our paper:

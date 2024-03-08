@@ -3,7 +3,7 @@
     {
       "name": "msrvtt-7k",
       "vis_format": "video",
-      "txt": "/home/s2/dayelee/1517_XPretrain/CLIP-ViP/data/msrvtt/annotations/msrvtt_ret_train7k.json",
+      "txt": "/home/s2/dayelee/1517_XPretrain/CLIP-ViP/data/msrvtt/annotations/msrvtt_ret_train9k.json",
       "vis": "/home/s2/dayelee/clipvip/msrvtt/videos_6fps"
     },
   
