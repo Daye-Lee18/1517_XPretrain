@@ -658,27 +658,29 @@ class clipvip:
 
                     # TODO: checkpointing 
                     # checkpoint
-                    if global_step % self.cfg.valid_steps == 0:
-                        LOGGER.info(f'Step {global_step}: start validation and Save')
-                        _, t2vr1 = self.validate(inference_loaders)
-                        
-                        model_saver.save(step=global_step, model=self.model)
-                        if self.accelerator.is_main_process:
-                            wandb.log({"val_acc": t2vr1}, step = step)
-                        # if hvd.rank() == 0 and self.cfg.if_model_saver and t2vr1 > best_model_saver.bestr1:
-                        if self.accelerator.is_main_process and self.cfg.if_model_saver and t2vr1 > best_model_saver.bestr1:
-                            best_model_saver.save(step=global_step, model=self.model)
-                            best_model_saver.bestr1 = t2vr1
-                    else:
-                        if global_step % self.cfg.only_valid_steps == 0:
-                            LOGGER.info(f'Step {global_step}: start inference')
+                    self.accelerator.wait_for_everyone()
+                    if self.accelerator.is_main_process:
+                        if global_step % self.cfg.valid_steps == 0:
+                            LOGGER.info(f'Step {global_step}: start validation and Save')
                             _, t2vr1 = self.validate(inference_loaders)
+                            
+                            model_saver.save(step=global_step, model=self.model)
                             if self.accelerator.is_main_process:
                                 wandb.log({"val_acc": t2vr1}, step = step)
                             # if hvd.rank() == 0 and self.cfg.if_model_saver and t2vr1 > best_model_saver.bestr1:
                             if self.accelerator.is_main_process and self.cfg.if_model_saver and t2vr1 > best_model_saver.bestr1:
                                 best_model_saver.save(step=global_step, model=self.model)
                                 best_model_saver.bestr1 = t2vr1
+                        else:
+                            if global_step % self.cfg.only_valid_steps == 0:
+                                LOGGER.info(f'Step {global_step}: start inference')
+                                _, t2vr1 = self.validate(inference_loaders)
+                                if self.accelerator.is_main_process:
+                                    wandb.log({"val_acc": t2vr1}, step = step)
+                                # if hvd.rank() == 0 and self.cfg.if_model_saver and t2vr1 > best_model_saver.bestr1:
+                                if self.accelerator.is_main_process and self.cfg.if_model_saver and t2vr1 > best_model_saver.bestr1:
+                                    best_model_saver.save(step=global_step, model=self.model)
+                                    best_model_saver.bestr1 = t2vr1
 
                 if global_step >= self.cfg.num_train_steps:
                     break
