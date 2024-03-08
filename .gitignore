@@ -4,3 +4,4 @@ wandb/
 test.py
 data_study.py
 *.out
+**/__pycache__/

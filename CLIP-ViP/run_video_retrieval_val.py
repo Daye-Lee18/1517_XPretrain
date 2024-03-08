@@ -72,12 +72,8 @@ class clipvip:
         self.accelerator.wait_for_everyone()
         model = VidCLIP(self.cfg)
 
-        # loading pretrained model checkpoint
-        if not self.cfg.is_train and self.cfg.checkpoint_path:
-            LOGGER.info(f"Loading checkpoint from {self.cfg.checkpoint_path}")
-            load_state_dict_with_mismatch(model, self.cfg.checkpoint_path)
-
-        elif self.cfg.e2e_weights_path:
+        # checkpoint load 
+        if self.cfg.e2e_weights_path:
             LOGGER.info(f"Loading e2e weights from {self.cfg.e2e_weights_path}")
             load_state_dict_with_mismatch(model, self.cfg.e2e_weights_path)
         
@@ -263,7 +259,7 @@ class clipvip:
         n_gpu = torch.cuda.device_count()
         self.cfg.n_gpu = n_gpu
 
-        self.model.train()
+        # self.model.train()
 
 
         # prepare data
@@ -361,7 +357,7 @@ class clipvip:
                             )
             TB_LOGGER.log_scalar_dict(test_log)
             # import pdb; pdb.set_trace() 
-        self.model.train()
+        # self.model.train()
         return test_log, t2vr1
     
 
