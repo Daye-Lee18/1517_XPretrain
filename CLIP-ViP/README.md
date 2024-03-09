@@ -51,6 +51,7 @@ horovodrun -np $NUM_GPUS python src/pretrain/run_pretrain.py \
 ```bash
 accelerate config --config_file [path/to/store/config_file] 
 ```
+-- using the different number of GPUs: open the yaml.file and change the number of processes 
 
 2. wandb setting 
 
