@@ -204,8 +204,8 @@ class CLIPTextEmbeddings(nn.Module):
         self.token_embedding = nn.Embedding(config.vocab_size, embed_dim)
         self.position_embedding = nn.Embedding(config.max_position_embeddings, embed_dim)
         self.emotion_embedding = nn.Embedding(8, embed_dim)
-        nn.init.constant_(self.emotion_embedding.weight, 0.0)
-        self.emotion_embedding.weight.requires_grad = False
+        # nn.init.constant_(self.emotion_embedding.weight, 0.0)
+        # self.emotion_embedding.weight.requires_grad = False
         # position_ids (1, len position emb) is contiguous in memory and exported when serialized
         self.register_buffer("position_ids", torch.arange(config.max_position_embeddings).expand((1, -1)))
 
