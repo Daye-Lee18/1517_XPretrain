@@ -11,7 +11,7 @@
     {
       "name": "msrvtt-1ka",
       "vis_format": "video",
-      "txt": "/home/hbcho/Documents/Toronto/Deep_Learning_Projects/1517_XPretrain/CLIP-ViP/data/msrvtt/annotations/msrvtt_train6k_emotion.json",
+      "txt": "/home/hbcho/Documents/Toronto/Deep_Learning_Projects/1517_XPretrain/CLIP-ViP/data/msrvtt/annotations/msrvtt_test1k_emotion.json",
       "vis": "/home/hbcho/Documents/Toronto/Deep_Learning_Projects/clipvip/msrvtt/videos_6fps"
     }
   ],

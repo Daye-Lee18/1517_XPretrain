@@ -204,7 +204,7 @@ class CLIPTextEmbeddings(nn.Module):
         self.token_embedding = nn.Embedding(config.vocab_size, embed_dim)
         self.position_embedding = nn.Embedding(config.max_position_embeddings, embed_dim)
         self.emotion_embedding = nn.Embedding(8, embed_dim)
-        # nn.init.constant_(self.emotion_embedding.weight, 0.0)
+        # nn.init.zeros_(self.emotion_embedding.weight)
         # self.emotion_embedding.weight.requires_grad = False
         # position_ids (1, len position emb) is contiguous in memory and exported when serialized
         self.register_buffer("position_ids", torch.arange(config.max_position_embeddings).expand((1, -1)))
@@ -223,13 +223,17 @@ class CLIPTextEmbeddings(nn.Module):
         seq_length = input_ids.shape[-1] if input_ids is not None else inputs_embeds.shape[-2]
         batch_size = input_ids.shape[0] if input_ids is not None else inputs_embeds.shape[0]
 
+        if emotions is not None:
+            # Change non-zero values to 1, effectively binarizing the input
+            emotions = torch.where(emotions > 0, torch.ones_like(emotions), torch.zeros_like(emotions))
+        
         # Retrieve all emotion embeddings
         all_emotion_embeds = self.emotion_embedding.weight.unsqueeze(0).repeat(batch_size, 1, 1)  # [batch_size, 8, embed_dim]
 
         if emotions is not None:
             emotion_mask = emotions.unsqueeze(-1).type_as(all_emotion_embeds)  # [batch_size, 8, 1]
             selected_emotion_embeds = all_emotion_embeds * emotion_mask  # [batch_size, 8, embed_dim]
-            emotion_embeds = selected_emotion_embeds.sum(1) / emotion_mask.sum(1)  # [batch_size, embed_dim]
+            emotion_embeds = selected_emotion_embeds.sum(1) / (emotion_mask.sum(1) + 1e-8)  # [batch_size, embed_dim]
         else:
             emotion_embeds = torch.zeros(batch_size, self.token_embedding.embedding_dim, device=input_ids.device if input_ids is not None else inputs_embeds.device)
 
