@@ -59,12 +59,15 @@ class clipvip:
         self, 
         cfg
     ):
-
+        self.cfg = cfg 
         ddp_kwargs = DistributedDataParallelKwargs(find_unused_parameters=False) 
-        self.accelerator = Accelerator(kwargs_handlers=[ddp_kwargs])
+        # ddp_kwargs = DistributedDataParallelKwargs(find_unused_parameters=self.cfg.gradient_accumulation_steps >1) 
+        self.accelerator = Accelerator(
+            gradient_accumulation_steps=self.cfg.gradient_accumulation_steps,
+            kwargs_handlers=[ddp_kwargs])
         state = AcceleratorState()
         num_processes = state.num_processes
-        self.cfg = cfg 
+        
         
         # SETUP MODEL 
         LOGGER.info("Setup model...")
@@ -72,19 +75,18 @@ class clipvip:
         self.accelerator.wait_for_everyone()
         model = VidCLIP(self.cfg)
 
-        # loading pretrained model checkpoint
-        if not self.cfg.is_train and self.cfg.checkpoint_path:
-            LOGGER.info(f"Loading checkpoint from {self.cfg.checkpoint_path}")
-            load_state_dict_with_mismatch(model, self.cfg.checkpoint_path)
-
-        elif self.cfg.e2e_weights_path:
+        # checkpoint load 
+        if self.cfg.e2e_weights_path:
             LOGGER.info(f"Loading e2e weights from {self.cfg.e2e_weights_path}")
             load_state_dict_with_mismatch(model, self.cfg.e2e_weights_path)
+            # loaded_state_dict = torch.load(
+            # self.cfg.e2e_weights_path, map_location=self.accelerator.device)
         
         if hasattr(self.cfg, "overload_logit_scale"):
             model.overload_logit_scale(self.cfg.overload_logit_scale)
         
         # model.to(device)
+        
         self.model = self.accelerator.prepare(model)
 
         LOGGER.info("Setup model done!")
@@ -92,9 +94,6 @@ class clipvip:
         # optimizer 
         optimizer = setup_e2e_optimizer(self.model, self.cfg)
         self.optim = self.accelerator.prepare(optimizer)
-
-        # Checkpoint 
-        # TODO
         
 
     def mk_video_ret_dataloader(self, dataset_name, vis_format, anno_path, vis_dir, cfg, tokenizer, mode):
@@ -186,8 +185,10 @@ class clipvip:
                 # print('feats vis_features', feats['vis_features'].shape)
                 # vis_feat = hvd.allgather(feats['vis_features'])
                 # text_feat = hvd.allgather(feats['text_features'])
-                vis_feat = feats['vis_features']
-                text_feat = feats['text_features']
+                # vis_feat = feats['vis_features']
+                # text_feat = feats['text_features']
+                vis_feat = self.accelerator.gather(feats['vis_features'])
+                text_feat = self.accelerator.gather(feats['text_features'])
 
                 # print('allgather vis_features', vis_feat.shape)
 
@@ -263,7 +264,7 @@ class clipvip:
         n_gpu = torch.cuda.device_count()
         self.cfg.n_gpu = n_gpu
 
-        self.model.train()
+        # self.model.train()
 
 
         # prepare data
@@ -295,8 +296,8 @@ class clipvip:
                 # print('feats vis_features', feats['vis_features'].shape)
                 # vis_feat = hvd.allgather(feats['vis_features'])
                 # text_feat = hvd.allgather(feats['text_features'])
-                vis_feat = feats['vis_features']
-                text_feat = feats['text_features']
+                vis_feat = self.accelerator.gather(feats['vis_features'])
+                text_feat = self.accelerator.gather(feats['text_features'])
 
                 # print('allgather vis_features', vis_feat.shape)
 
@@ -361,7 +362,7 @@ class clipvip:
                             )
             TB_LOGGER.log_scalar_dict(test_log)
             # import pdb; pdb.set_trace() 
-        self.model.train()
+        # self.model.train()
         return test_log, t2vr1
     
 
@@ -400,16 +401,16 @@ class clipvip:
 
     def start_training(self):
         # cfg = shared_configs.get_pretraining_args()
-
-        wandb.init(
-            project= "clipvip",
-            name=f"lr_{self.cfg.learning_rate}_epoch_{self.cfg.num_train_epochs}_bs_{self.cfg.train_batch_size}",
-            config={
-                "learning_rate": self.cfg.learning_rate,
-                "epochs": self.cfg.num_train_epochs,
-                "bs": self.cfg.train_batch_size
-            }
-        )
+        if self.accelerator.is_main_process:
+            wandb.init(
+                project= "clipvip",
+                name=f"lr_{self.cfg.learning_rate}_epoch_{self.cfg.num_train_epochs}_bs_{self.cfg.train_batch_size}_gpu_{torch.cuda.device_count()}_gradient_acc_{self.cfg.gradient_accumulation_steps}",
+                config={
+                    "learning_rate": self.cfg.learning_rate,
+                    "epochs": self.cfg.num_train_epochs,
+                    "bs": self.cfg.train_batch_size
+                }
+            )
         self.blob_mount()
         set_random_seed(self.cfg.seed)
 
@@ -491,24 +492,26 @@ class clipvip:
             save_training_meta(self.cfg)
             LOGGER.info("Saving training done...")
             if self.cfg.if_tb_log:
-                # TB_LOGGER.create(join(self.cfg.output_dir, 'log'))
-                save_dir = self.make_dir()
-                TB_LOGGER.create(join(save_dir, 'log'))
+                TB_LOGGER.create(join(self.cfg.output_dir, 'log'))
+                # save_dir = self.make_dir()
+                # TB_LOGGER.create(join(save_dir, 'log'))
             # pbar = tqdm(total=self.cfg.num_train_steps)
             if self.cfg.if_model_saver:
-                model_saver = ModelSaver(join(self.cfg.output_dir, "ckpt"), self.cfg)
-                best_model_saver = BestModelSaver(join(self.cfg.output_dir, "ckpt"), self.cfg)
+                model_saver = ModelSaver(join(self.cfg.output_dir, "ckpt"))
+                best_model_saver = BestModelSaver(join(self.cfg.output_dir, "ckpt"))
+                # model_saver = ModelSaver(join(self.cfg.output_dir, "ckpt"), self.cfg)
+                # best_model_saver = BestModelSaver(join(self.cfg.output_dir, "ckpt"), self.cfg)
             else:
                 model_saver = NoOp()
                 restorer = NoOp()
                 best_model_saver = NoOp()
                 
             if self.cfg.if_log2file:
-                save_dir = self.make_dir()
-                # add_log_to_file(join(self.cfg.output_dir, "log", "log.txt"))
-                if not os.path.exists(join(save_dir, "log")):
-                    os.makedirs(join(save_dir, "log"))
-                add_log_to_file(join(save_dir, "log", "log.txt"))
+                # save_dir = self.make_dir()
+                add_log_to_file(join(self.cfg.output_dir, "log", "log.txt"))
+                # if not os.path.exists(join(save_dir, "log")):
+                    # os.makedirs(join(save_dir, "log"))
+                # add_log_to_file(join(save_dir, "log", "log.txt"))
         else:
             LOGGER.disabled = True
             # pbar = NoOp()
@@ -523,21 +526,21 @@ class clipvip:
             # LOGGER.info(self.cfg)
             LOGGER.info("Starting training...")
             LOGGER.info(f"***** Running training with {n_gpu} GPUs *****")
-        #     LOGGER.info(f"  Single-GPU Non-Accumulated batch size = {self.cfg.train_batch_size}")
-        #     LOGGER.info(f"  max_n_example_per_group = {self.cfg.max_n_example_per_group}")
-        #     LOGGER.info(f"  Accumulate steps = {self.cfg.gradient_accumulation_steps}")
-        #     LOGGER.info(f"  Total batch size = #GPUs * Single-GPU batch size * "
-        #                 f"max_n_example_per_group * Accumulate steps [Image] = {total_train_batch_size}")
-        #     LOGGER.info(f"  Total #epochs = {self.cfg.num_train_epochs}")
-        #     LOGGER.info(f"  Total #steps = {self.cfg.num_train_steps}")
+            LOGGER.info(f"  Single-GPU Non-Accumulated batch size = {self.cfg.train_batch_size}")
+            LOGGER.info(f"  max_n_example_per_group = {self.cfg.max_n_example_per_group}")
+            LOGGER.info(f"  Accumulate steps = {self.cfg.gradient_accumulation_steps}")
+            LOGGER.info(f"  Total batch size = #GPUs * Single-GPU batch size * "
+                        f"max_n_example_per_group * Accumulate steps [Image] = {total_train_batch_size}")
+            LOGGER.info(f"  Total #epochs = {self.cfg.num_train_epochs}")
+            LOGGER.info(f"  Total #steps = {self.cfg.num_train_steps}")
             LOGGER.info(f"  Validate and Save every {self.cfg.valid_steps} steps, in total {actual_num_valid} times")
-        #     LOGGER.info(f"  Only Validate every {self.cfg.only_valid_steps} steps")
+            LOGGER.info(f"  Only Validate every {self.cfg.only_valid_steps} steps")
 
-    # # quick hack for amp delay_unscale bug
-    # with optimizer.skip_synchronize():
-    #     optimizer.zero_grad()
-    #     if global_step == 0:
-    #         optimizer.step()
+        # quick hack for amp delay_unscale bug
+        # with optimizer.skip_synchronize():
+        #     optimizer.zero_grad()
+        #     if global_step == 0:
+        #         optimizer.step()
 
         running_loss = RunningMeter('train_loss', smooth=0)
 
@@ -555,26 +558,61 @@ class clipvip:
         self.accelerator.wait_for_everyone()
         for epoch in range(1, self.cfg.num_train_epochs +1):
             # for step, batch in enumerate(InfiniteIterator(train_loader)):
+            
             for step, batch in enumerate(load_loop(train_loader)):
-                
+                # self.accelerator.wait_for_everyone()
                 self.model.train()
-                outputs = self.model(**batch)
-               
-                if self.cfg.loss_config.if_gather: 
-                    # vis_feat = hvd.allgather(outputs['vis_features'])
-                    # text_feat = hvd.allgather(outputs['text_features'])
-                    vis_feat = outputs['vis_features']
-                    text_feat = outputs['text_features']
-                    if self.cfg.loss_config.loss_name in ["NCELearnableTempLoss", "NCELearnableTempDSLLoss"]:
-                        if hasattr(self.model, 'module'):
-                            logit_scale = self.model.module.clipmodel.logit_scale
+                if (step + 1) % self.cfg.gradient_accumulation_steps != 0:
+                    # with self.model.no_sync():
+                    with self.accelerator.no_sync(self.model):
+                        outputs = self.model(**batch)
+                        ############### self.accelerator.gather을 하니까 accelerator처음 설정할 때 true로 설정해야했음 
+                        if self.cfg.loss_config.if_gather: 
+                            # vis_feat = hvd.allgather(outputs['vis_features'])
+                            # text_feat = hvd.allgather(outputs['text_features'])
+                            # vis_feat = self.accelerator.gather(outputs['vis_features'])
+                            # text_feat = self.accelerator.gather(outputs['text_features'])
+                            vis_feat = outputs['vis_features']
+                            text_feat = outputs['text_features']
+                            if self.cfg.loss_config.loss_name in ["NCELearnableTempLoss", "NCELearnableTempDSLLoss"]:
+                                if hasattr(self.model, 'module'):
+                                    logit_scale = self.model.module.clipmodel.logit_scale
+                                else:
+                                    logit_scale = self.model.clipmodel.logit_scale
+                                loss = loss_func(vis_feat, text_feat, logit_scale)
+                            else:
+                                loss = loss_func(vis_feat, text_feat)
                         else:
-                            logit_scale = self.model.clipmodel.logit_scale
-                        loss = loss_func(vis_feat, text_feat, logit_scale)
+                            loss = outputs['loss']
+
+                        ######## under the with self.model.no_sync() 
+                        running_loss(loss.item())
+                        self.accelerator.backward(loss)
+                else: #(step + 1) % self.cfg.gradient_accumulation_steps != 0 
+                    outputs = self.model(**batch)
+                    
+                    if self.cfg.loss_config.if_gather: 
+                        # vis_feat = hvd.allgather(outputs['vis_features'])
+                        # text_feat = hvd.allgather(outputs['text_features'])
+                        # vis_feat = self.accelerator.gather(outputs['vis_features'])
+                        # text_feat = self.accelerator.gather(outputs['text_features'])
+                        vis_feat = outputs['vis_features']
+                        text_feat = outputs['text_features']
+                        if self.cfg.loss_config.loss_name in ["NCELearnableTempLoss", "NCELearnableTempDSLLoss"]:
+                            if hasattr(self.model, 'module'):
+                                logit_scale = self.model.module.clipmodel.logit_scale
+                            else:
+                                logit_scale = self.model.clipmodel.logit_scale
+                            loss = loss_func(vis_feat, text_feat, logit_scale)
+                        else:
+                            loss = loss_func(vis_feat, text_feat)
                     else:
-                        loss = loss_func(vis_feat, text_feat)
-                else:
-                    loss = outputs['loss']
+                        loss = outputs['loss']
+                    ######## under the with self.model.no_sync() 
+                    running_loss(loss.item())
+                    self.accelerator.backward(loss)
+                    self.optim.step()
+                    self.optim.zero_grad()
 
                 if hasattr(self.model, 'module'):
                     torch.clamp_(self.model.module.clipmodel.logit_scale.data, 0, np.log(200))
@@ -582,6 +620,8 @@ class clipvip:
                 else:
                     torch.clamp_(self.model.clipmodel.logit_scale.data, 0, np.log(200))
                     logit_scale_ = self.model.clipmodel.logit_scale.data
+                        
+                
 
                 if self.accelerator.is_main_process:
                     if step % 10 == 0:
@@ -589,10 +629,10 @@ class clipvip:
                         # LOGGER.info(f'Step {global_step}: loss {loss} lr {lr_} logit_scale {logit_scale_}')
                         LOGGER.info(f'Step {step}: loss {loss} lr {lr_} logit_scale {logit_scale_}')
 
-                running_loss(loss.item())
-                self.accelerator.backward(loss)
-
-                wandb.log({"training_loss": loss}, step = step)
+                # running_loss(loss.item())
+                # self.accelerator.backward(loss)
+                if self.accelerator.is_main_process:
+                    wandb.log({"training_loss": loss}, step = step)
                 # self.optim.zero_grad()
                 # self.accelerator.backward(loss)
                 # self.optim.step()
@@ -605,8 +645,8 @@ class clipvip:
                 #     self.accelerator.backward(scaled_loss)
                 #     # zero_none_grad(model)
                 #     # self.optim.synchronize()
-                    
-                # self.optim
+                            
+                # optimizer 
                 if (step + 1) % self.cfg.gradient_accumulation_steps == 0:
                     # self.optim.step()
                     # self.optim.zero_grad()
@@ -617,8 +657,9 @@ class clipvip:
                             TB_LOGGER.add_scalar("train/grad_norm", grad_norm, global_step)
                     TB_LOGGER.step()
 
-                    self.optim.step()
-                    self.optim.zero_grad()
+                if (step + 1) % self.cfg.gradient_accumulation_steps == 0 or step == len(train_loader) - 1:
+                    # self.optim.step()
+                    # self.optim.zero_grad()
 
                     global_step += 1
                     TB_LOGGER.log_scalar_dict({'vtc_loss': running_loss.val})
@@ -642,46 +683,53 @@ class clipvip:
                         "train/lr", lr_this_step,
                         global_step)
 
-                    # # update model params
-                    # if self.cfg.grad_norm != -1:
-                    #     grad_norm = clip_grad_norm_(
-                    #         amp.master_params(self.optim), self.cfg.grad_norm)
-                    #     TB_LOGGER.add_scalar("train/grad_norm", grad_norm, global_step)
-                    # TB_LOGGER.step()
+                    # update model params
+                    if self.cfg.grad_norm != -1:
+                        # grad_norm = clip_grad_norm_(
+                        #     amp.master_params(self.optim), self.cfg.grad_norm)
+                        grad_norm = clip_grad_norm_(
+                            self.model.parameters(), self.cfg.grad_norm)
+                        if self.accelerator.is_main_process:
+                            TB_LOGGER.add_scalar("train/grad_norm", grad_norm, global_step)
+                    TB_LOGGER.step()
 
-                    # # Check if there is None grad
+                    # Check if there is None grad
                     # none_grads = [
-                    #     p[0] for p in model.named_parameters()
+                    #     p[0] for p in self.model.named_parameters()
                     #     if p[1].requires_grad and p[1].grad is None]
 
                     # assert len(none_grads) == 0, f"{none_grads}"
 
                     # with self.optim.skip_synchronize():
-                    #     self.optim.step()
-                    #     self.optim.zero_grad()
+                    # self.optim.step()
+                    # self.optim.zero_grad()
                     restorer.step()
 
                     # TODO: checkpointing 
                     # checkpoint
-                    if global_step % self.cfg.valid_steps == 0:
-                        LOGGER.info(f'Step {global_step}: start validation and Save')
-                        _, t2vr1 = self.validate(inference_loaders)
-                        
-                        model_saver.save(step=global_step, model=self.model)
-                        wandb.log({"val_loss": t2vr1}, step = step)
-                        # if hvd.rank() == 0 and self.cfg.if_model_saver and t2vr1 > best_model_saver.bestr1:
-                        if self.accelerator.is_main_process and self.cfg.if_model_saver and t2vr1 > best_model_saver.bestr1:
-                            best_model_saver.save(step=global_step, model=self.model)
-                            best_model_saver.bestr1 = t2vr1
-                    else:
-                        if global_step % self.cfg.only_valid_steps == 0:
-                            LOGGER.info(f'Step {global_step}: start inference')
+                    self.accelerator.wait_for_everyone()
+                    if self.accelerator.is_main_process:
+                        if global_step % self.cfg.valid_steps == 0:
+                            LOGGER.info(f'Step {global_step}: start validation and Save')
                             _, t2vr1 = self.validate(inference_loaders)
-                            wandb.log({"val_loss": t2vr1}, step = step)
+                            
+                            model_saver.save(step=global_step, model=self.model)
+                            if self.accelerator.is_main_process:
+                                wandb.log({"val_acc": t2vr1}, step = step)
                             # if hvd.rank() == 0 and self.cfg.if_model_saver and t2vr1 > best_model_saver.bestr1:
                             if self.accelerator.is_main_process and self.cfg.if_model_saver and t2vr1 > best_model_saver.bestr1:
                                 best_model_saver.save(step=global_step, model=self.model)
                                 best_model_saver.bestr1 = t2vr1
+                        else:
+                            if global_step % self.cfg.only_valid_steps == 0:
+                                LOGGER.info(f'Step {global_step}: start inference')
+                                _, t2vr1 = self.validate(inference_loaders)
+                                if self.accelerator.is_main_process:
+                                    wandb.log({"val_acc": t2vr1}, step = step)
+                                # if hvd.rank() == 0 and self.cfg.if_model_saver and t2vr1 > best_model_saver.bestr1:
+                                if self.accelerator.is_main_process and self.cfg.if_model_saver and t2vr1 > best_model_saver.bestr1:
+                                    best_model_saver.save(step=global_step, model=self.model)
+                                    best_model_saver.bestr1 = t2vr1
 
                 if global_step >= self.cfg.num_train_steps:
                     break
@@ -689,15 +737,16 @@ class clipvip:
         if global_step % self.cfg.valid_steps != 0:
             LOGGER.info(f'Step {global_step}: start validation')
             _, t2vr1 = self.validate(inference_loaders)
-            wandb.log({"val_loss": t2vr1}, step = step)
+            if self.accelerator.is_main_process:
+                wandb.log({"val_acc": t2vr1}, step = step)
 
             model_saver.save(step=global_step, model=self.model)
             # if hvd.rank() == 0 and self.cfg.if_model_saver and t2vr1 > best_model_saver.bestr1:
             if self.accelerator.is_main_process and self.cfg.if_model_saver and t2vr1 > best_model_saver.bestr1:
                 best_model_saver.save(step=global_step, model=self.model)
                 best_model_saver.bestr1 = t2vr1
-
-        wandb.finish()
+        if self.accelerator.is_main_process:
+            wandb.finish()
 
 if __name__ == '__main__':
     # Initialize Horovod

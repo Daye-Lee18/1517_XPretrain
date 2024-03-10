@@ -287,16 +287,16 @@ class clipvip:
 
     def start_training(self):
         # cfg = shared_configs.get_pretraining_args()
-
-        wandb.init(
-            project= "clipvip",
-            name=f"lr_{self.cfg.learning_rate}_epoch_{self.cfg.num_train_epochs}_bs_{self.cfg.train_batch_size}",
-            config={
-                "learning_rate": self.cfg.learning_rate,
-                "epochs": self.cfg.num_train_epochs,
-                "bs": self.cfg.train_batch_size
-            }
-        )
+        if self.accelerator.is_main_process:
+            wandb.init(
+                project= "clipvip",
+                name=f"lr_{self.cfg.learning_rate}_epoch_{self.cfg.num_train_epochs}_bs_{self.cfg.train_batch_size}_gpu_{torch.cuda.device_count()}",
+                config={
+                    "learning_rate": self.cfg.learning_rate,
+                    "epochs": self.cfg.num_train_epochs,
+                    "bs": self.cfg.train_batch_size
+                }
+            )
         self.blob_mount()
         set_random_seed(self.cfg.seed)
 
@@ -478,8 +478,8 @@ class clipvip:
 
                 running_loss(loss.item())
                 self.accelerator.backward(loss)
-
-                wandb.log({"training_loss": loss}, step = step)
+                if self.accelerator.is_main_process:
+                    wandb.log({"training_loss": loss}, step = step)
                 # self.optim.zero_grad()
                 # self.accelerator.backward(loss)
                 # self.optim.step()
@@ -555,7 +555,8 @@ class clipvip:
                         _, t2vr1 = self.validate(inference_loaders)
                         
                         model_saver.save(step=global_step, model=self.model)
-                        wandb.log({"val_loss": t2vr1}, step = step)
+                        if self.accelerator.is_main_process:
+                            wandb.log({"val_loss": t2vr1}, step = step)
                         # if hvd.rank() == 0 and self.cfg.if_model_saver and t2vr1 > best_model_saver.bestr1:
                         if self.accelerator.is_main_process and self.cfg.if_model_saver and t2vr1 > best_model_saver.bestr1:
                             best_model_saver.save(step=global_step, model=self.model)
@@ -564,7 +565,8 @@ class clipvip:
                         if global_step % self.cfg.only_valid_steps == 0:
                             LOGGER.info(f'Step {global_step}: start inference')
                             _, t2vr1 = self.validate(inference_loaders)
-                            wandb.log({"val_loss": t2vr1}, step = step)
+                            if self.accelerator.is_main_process:
+                                wandb.log({"val_loss": t2vr1}, step = step)
                             # if hvd.rank() == 0 and self.cfg.if_model_saver and t2vr1 > best_model_saver.bestr1:
                             if self.accelerator.is_main_process and self.cfg.if_model_saver and t2vr1 > best_model_saver.bestr1:
                                 best_model_saver.save(step=global_step, model=self.model)
@@ -576,7 +578,8 @@ class clipvip:
         if global_step % self.cfg.valid_steps != 0:
             LOGGER.info(f'Step {global_step}: start validation')
             _, t2vr1 = self.validate(inference_loaders)
-            wandb.log({"val_loss": t2vr1}, step = step)
+            if self.accelerator.is_main_process:
+                wandb.log({"val_loss": t2vr1}, step = step)
 
             model_saver.save(step=global_step, model=self.model)
             # if hvd.rank() == 0 and self.cfg.if_model_saver and t2vr1 > best_model_saver.bestr1:

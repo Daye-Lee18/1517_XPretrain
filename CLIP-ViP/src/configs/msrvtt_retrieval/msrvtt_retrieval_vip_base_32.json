@@ -1,9 +1,9 @@
 {
   "train_datasets": 
     {
-      "name": "msrvtt-7k",
+      "name": "msrvtt-9k",
       "vis_format": "video",
-      "txt": "/home/s2/dayelee/1517_XPretrain/CLIP-ViP/data/msrvtt/annotations/msrvtt_ret_train7k.json",
+      "txt": "/home/s2/dayelee/1517_XPretrain/CLIP-ViP/data/msrvtt/annotations/msrvtt_ret_train9k.json",
       "vis": "/home/s2/dayelee/clipvip/msrvtt/videos_6fps"
     },
   
@@ -37,10 +37,10 @@
       "add_cls_num": 3
   },
   
-  "train_batch_size": 16,
-  "test_batch_size": 16,
+  "train_batch_size": 8,
+  "test_batch_size": 8,
   "max_n_example_per_group": 1,
-  "gradient_accumulation_steps": 1,
+  "gradient_accumulation_steps": 8,
   "n_workers": 8,
   "pin_mem": 1,
   "fp16": 1,
