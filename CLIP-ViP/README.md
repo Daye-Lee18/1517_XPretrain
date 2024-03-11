@@ -44,6 +44,23 @@ horovodrun -np $NUM_GPUS python src/pretrain/run_pretrain.py \
 
 `$CONFIG_PATH` should be set to one of the .json config files available at [src/configs/pretrain](src/configs/pretrain). Currently, `pretrain_vip_base_32.json` and `pretrain_vip_base_16.json` are supported
 
+### Text-to-Video Retrieval Finetuning (Hyejin)
+
+## for training: 
+ - add `is_train`
+  ```bash
+  HOROVOD_CACHE_CAPACITY=4096 horovodrun -np 2 python run_video_retrieval_hj.py --config /data2/Hyejin/1517_XPretrain/CLIP-ViP/src/configs/msrvtt_retrieval/msrvtt_retrieval_vip_base_32.json --blob_mount_dir ./ --is_train
+  ```
+
+## for testing:
+  - without `is_train`
+    ```bash
+  HOROVOD_CACHE_CAPACITY=4096 horovodrun -np 2 python run_video_retrieval_hj.py --config /data2/Hyejin/1517_XPretrain/CLIP-ViP/src/configs/msrvtt_retrieval/msrvtt_retrieval_vip_base_32.json --blob_mount_dir ./
+  ```
+
+
+
+
 ### Text-to-Video Retrieval Finetuning
 
 1. setting for accelerate (only at the first time)
