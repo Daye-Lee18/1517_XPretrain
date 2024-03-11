@@ -135,10 +135,16 @@ class HDVILAVideoRetrievalDataset(Dataset):
             video = self.datalist[index]["video"]
             video_id, _ = os.path.splitext(video)
             vis_id = video_id
-            texts = self.datalist[index]['caption']
+            if not ("desc" in self.datalist[index].keys()):
+                texts = self.datalist[index]['caption']
+            else:
+                texts = self.datalist[index]['desc']
         else:
             vis_id = self.datalist[index]['video_id']
-            texts = self.datalist[index]['caption']
+            if not ("desc" in self.datalist[index].keys()):
+                texts = self.datalist[index]['caption']
+            else:
+                texts = self.datalist[index]['desc']
         
         # if isinstance(texts, list):
         #     texts = random.sample(self.datalist[index]['text'], self.pos_num)
