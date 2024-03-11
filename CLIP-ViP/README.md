@@ -60,7 +60,6 @@ horovodrun -np $NUM_GPUS python src/pretrain/run_pretrain.py \
 
 
 
-
 ### Text-to-Video Retrieval Finetuning
 
 1. setting for accelerate (only at the first time)
