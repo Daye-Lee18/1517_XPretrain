@@ -55,6 +55,8 @@ accelerate config --config_file [path/to/store/config_file]
 
 2. wandb setting 
 
+create a project called "clipvip" in your wandb 
+
 ```bash
 wandb login 
 wandb online
@@ -72,10 +74,10 @@ bash src/tasks/run.sh
 4. test the code 
 
 ```bash
-accelerate launch --config_file /home/s2/dayelee/accel.yaml ./run_video_retrieval_val.py --config /home/s2/dayelee/1517_XPretrain/CLIP-ViP/src/configs/msrvtt_retrieval/msrvtt_retrieval_vip_base_32.json --blob_mount_dir /home/s2/dayelee --num_train_epochs 5 --output_dir /shared/s2/lab01/dayelee_store/checkpoints/msrvtt --train_batch_size 8 --e2e_weights_path /home/s2/dayelee/dayelee_store/checkpoints/msrvtt_16_gpu_2/epoch_5_bs_16_lr_1e-06_31/model_best.pt
+accelerate launch --config_file /home/s2/dayelee/accel.yaml ./run_video_retrieval_val.py --config /home/s2/dayelee/1517_XPretrain/CLIP-ViP/src/configs/msrvtt_retrieval/msrvtt_retrieval_vip_base_32.json --blob_mount_dir /home/s2/dayelee --num_train_epochs 5 --output_dir /shared/s2/lab01/dayelee_store/checkpoints/msrvtt --train_batch_size 16 --e2e_weights_path /home/s2/dayelee/dayelee_store/checkpoints/msrvtt_16_gpu_2/epoch_5_bs_16_lr_1e-06_31/model_best.pt
 ```
 
-make sure that you **do not** use `--is_train` and enter the `--e2e_weights_path` for loading a model checkpoint 
+make sure that you **do not** use `--is_train` when testing and enter the `--e2e_weights_path` for loading a model checkpoint 
 
 ## Citation
 If you find the code and pre-trained models useful for your research, please consider citing our paper:

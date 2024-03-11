@@ -284,6 +284,115 @@ class clipvip:
 
         return save_dir 
 
+    @torch.no_grad()
+    def test(self):
+        self.blob_mount()
+        set_random_seed(self.cfg.seed)
+
+        n_gpu = torch.cuda.device_count()
+        self.cfg.n_gpu = n_gpu
+
+        # self.model.train()
+
+
+        # prepare data
+        tokenizer = CLIPTokenizerFast.from_pretrained(self.cfg.clip_config)
+        train_loader, val_loaders, inference_loaders = self.setup_dataloaders(tokenizer)
+
+        
+        img_norm = None
+        # PrefecthLoader: overlap compute and cuda data transfer copied and then modified from nvidia apex
+        train_loader = PrefetchLoader(train_loader, img_norm)
+        val_loaders = {k: PrefetchLoader(v, img_norm)
+                    for k, v in val_loaders.items()}
+        inference_loaders = {k: PrefetchLoader(v, img_norm)
+                    for k, v in inference_loaders.items()}
+        
+        train_loader, val_loaders, inference_loaders = self.accelerator.prepare(train_loader, val_loaders, inference_loaders)
+
+        self.model.eval()
+
+        st = time.time()
+        
+        for loader_name, inference_loaders in inference_loaders.items():
+            LOGGER.info(f"Loop inference_loader {loader_name}.")
+            test_len = len(inference_loaders.dataset)
+            text_feats = []
+            vis_feats = []
+            for test_step, batch in enumerate(inference_loaders):
+                feats = self.model(**batch)  # dict
+                # print('feats vis_features', feats['vis_features'].shape)
+                # vis_feat = hvd.allgather(feats['vis_features'])
+                # text_feat = hvd.allgather(feats['text_features'])
+                vis_feat = self.accelerator.gather(feats['vis_features'])
+                text_feat = self.accelerator.gather(feats['text_features'])
+
+                # print('allgather vis_features', vis_feat.shape)
+
+                text_feats.append(text_feat.cpu().numpy())
+                vis_feats.append(vis_feat.cpu().numpy())
+
+            # # Gather across all processes
+            # text_feats = all_gather_list(text_feats)
+            # vis_feats = all_gather_list(vis_feats)
+
+            text_feats = np.vstack(text_feats)
+            vis_feats = np.vstack(vis_feats)
+
+            text_feats = text_feats[:test_len]
+            vis_feats = vis_feats[:test_len]
+
+            sim_matrix = cal_cossim(text_feats, vis_feats)
+
+            for type in ["simple", "DSL"]:
+                LOGGER.info(f"Evaluate under setting: {type}.")
+                test_log = {f'test/{loader_name}_t2v_recall_1': 0,
+                        f'test/{loader_name}_t2v_recall_5': 0,
+                        f'test/{loader_name}_t2v_recall_10': 0,
+                        f'test/{loader_name}_t2v_recall_median': 0,
+                        f'test/{loader_name}_t2v_recall_mean': 0,
+                        f'test/{loader_name}_v2t_recall_1': 0,
+                        f'test/{loader_name}_v2t_recall_5': 0,
+                        f'test/{loader_name}_v2t_recall_10': 0,
+                        f'test/{loader_name}_v2t_recall_median': 0,
+                        f'test/{loader_name}_v2t_recall_mean': 0}
+
+                if type == "DSL":
+                    sim_matrix = sim_matrix * np_softmax(sim_matrix*100, axis=0)
+
+                v2tr1,v2tr5,v2tr10,v2tmedr,v2tmeanr = compute_metrics(sim_matrix.T)
+                t2vr1,t2vr5,t2vr10,t2vmedr,t2vmeanr = compute_metrics(sim_matrix)
+
+                test_log.update({f'test/{loader_name}_t2v_recall_1': t2vr1,
+                                f'test/{loader_name}_t2v_recall_5': t2vr5,
+                                f'test/{loader_name}_t2v_recall_10': t2vr10,
+                                f'test/{loader_name}_t2v_recall_median': t2vmedr,
+                                f'test/{loader_name}_t2v_recall_mean': t2vmeanr,
+                                f'test/{loader_name}_v2t_recall_1': v2tr1,
+                                f'test/{loader_name}_v2t_recall_5': v2tr5,
+                                f'test/{loader_name}_v2t_recall_10': v2tr10,
+                                f'test/{loader_name}_v2t_recall_median': v2tmedr,
+                                f'test/{loader_name}_v2t_recall_mean': v2tmeanr
+                                })
+
+                LOGGER.info(f"test finished in {int(time.time() - st)} seconds, "
+                            f"testated on {vis_feats.shape[0]} videos"
+                            f"{loader_name} t2v recall@1: {test_log['test/%s_t2v_recall_1'%(loader_name)] * 100:.4f} "
+                            f"{loader_name} t2v recall@5: {test_log['test/%s_t2v_recall_5'%(loader_name)] * 100:.4f} "
+                            f"{loader_name} t2v recall@10: {test_log['test/%s_t2v_recall_10'%(loader_name)] * 100:.4f} "
+                            f"{loader_name} t2v recall_med: {test_log['test/%s_t2v_recall_median'%(loader_name)] :.1f} "
+                            f"{loader_name} t2v recall_mean: {test_log['test/%s_t2v_recall_mean'%(loader_name)] :.1f} "
+                            f"{loader_name} v2t recall@1: {test_log['test/%s_v2t_recall_1'%(loader_name)] * 100:.4f} "
+                            f"{loader_name} v2t recall@5: {test_log['test/%s_v2t_recall_5'%(loader_name)] * 100:.4f} "
+                            f"{loader_name} v2t recall@10: {test_log['test/%s_v2t_recall_10'%(loader_name)] * 100:.4f} "
+                            f"{loader_name} v2t recall_med: {test_log['test/%s_v2t_recall_median'%(loader_name)] :.1f} "
+                            f"{loader_name} v2t recall_mean: {test_log['test/%s_v2t_recall_mean'%(loader_name)] :.1f} "
+                            )
+            TB_LOGGER.log_scalar_dict(test_log)
+            # import pdb; pdb.set_trace() 
+        # self.model.train()
+        return test_log, t2vr1
+
 
     def start_training(self):
         # cfg = shared_configs.get_pretraining_args()
