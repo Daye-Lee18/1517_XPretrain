@@ -85,7 +85,7 @@ def setup_dataloaders(cfg, tokenizer):
     )
 
     val_loaders = {}
-    for db in cfg.val_datasets:
+    for db in cfg.inference_datasets:
         val_loaders[db.name] = mk_video_ret_dataloader(
             dataset_name=db.name, vis_format=db.vis_format,
             anno_path=db.txt, vis_dir=db.vis,
@@ -248,9 +248,15 @@ def start_training(rand):
     tokenizer = CLIPTokenizerFast.from_pretrained(cfg.clip_config)
     train_loader, val_loaders, inference_loaders = setup_dataloaders(cfg, tokenizer)
     if not cfg.is_train:
+        img_norm = None
+        train_loader = PrefetchLoader(train_loader, img_norm)
+        val_loaders = {k: PrefetchLoader(v, img_norm)
+                    for k, v in val_loaders.items()}
+        inference_loaders = {k: PrefetchLoader(v, img_norm)
+                    for k, v in inference_loaders.items()}
+        
         LOGGER.info(f'Step zero: start inference')
         validate(model, inference_loaders, cfg)
-    
     else:
         img_norm = None
         train_loader = PrefetchLoader(train_loader, img_norm)
@@ -258,7 +264,7 @@ def start_training(rand):
                     for k, v in val_loaders.items()}
         inference_loaders = {k: PrefetchLoader(v, img_norm)
                     for k, v in inference_loaders.items()}
-
+        
         # compute the number of steps and update cfg
         total_train_batch_size = int(
             n_gpu * cfg.train_batch_size *
@@ -457,7 +463,7 @@ def blob_mount(cfg):
     db.txt = db.txt
     db.vis = db.vis
 
-    for db in cfg.val_datasets:
+    for db in cfg.inference_datasets:
         db.txt = db.txt
         db.vis = db.vis
 

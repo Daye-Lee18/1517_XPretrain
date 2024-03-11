@@ -4,7 +4,7 @@ wandb/
 test.py
 data_study.py
 *.out
-
+save_dir/
 # Byte-compiled / optimized / DLL files
 src/utils/__pycache__/load_save.cpython-310.pyc
 **__pycache__/
