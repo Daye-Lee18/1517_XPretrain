@@ -41,7 +41,7 @@ from src.optimization.sched import get_lr_sched
 from src.optimization.utils import setup_e2e_optimizer
 from src.optimization.loss import build_loss_func
 from src.utils.distributed import all_gather_list
-from src.utils.metrics import cal_cossim, compute_metrics, compute_metrics_multi, np_softmax
+from src.utils.metrics import cal_cossim, compute_metrics, test_compute_metrics, compute_metrics_multi, np_softmax
 import string
 
 def mk_video_ret_dataloader(dataset_name, vis_format, anno_path, vis_dir, cfg, tokenizer, mode):
@@ -171,8 +171,27 @@ def validate(model, val_loaders, cfg):
             if type == "DSL":
                 sim_matrix = sim_matrix * np_softmax(sim_matrix*100, axis=0)
 
-            v2tr1,v2tr5,v2tr10,v2tmedr,v2tmeanr = compute_metrics(sim_matrix.T)
-            t2vr1,t2vr5,t2vr10,t2vmedr,t2vmeanr = compute_metrics(sim_matrix)
+            if cfg.is_train:
+                    v2tr1,v2tr5,v2tr10,v2tmedr,v2tmeanr = compute_metrics(sim_matrix.T)
+                    t2vr1,t2vr5,t2vr10,t2vmedr,t2vmeanr = compute_metrics(sim_matrix)
+                else: # test 
+                    # emotion data index extraction  
+                    for db in cfg.inference_datasets: 
+                        indx_anno_path = db.txt
+                        with open(indx_anno_path, "r") as f:
+                            inference_indx_anno_data = json.load(f)
+
+                    # inference_indx_anno_data[0]['emotion']
+
+                    # 'emotion' 값을 boolean으로 변환
+                    emotion_mask = []
+                    for item in inference_indx_anno_data:
+                        emotion_mask.append(bool(item['emotion']))
+
+                    v2tr1,v2tr5,v2tr10,v2tmedr,v2tmeanr = test_compute_metrics(sim_matrix.T, np.array(emotion_mask))
+                    t2vr1,t2vr5,t2vr10,t2vmedr,t2vmeanr = test_compute_metrics(sim_matrix,  np.array(emotion_mask))
+
+
 
             val_log.update({f'valid/{loader_name}_t2v_recall_1': t2vr1,
                             f'valid/{loader_name}_t2v_recall_5': t2vr5,

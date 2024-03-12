@@ -52,7 +52,8 @@ def compute_metrics(x):
     meanr  = np.mean(ind) + 1
     return r1, r5, r10, medr, meanr
 
-def test_compute_metrics(x):
+def test_compute_metrics(x, emotion_mask):
+    x = x[emotion_mask] # (emotion_data, original_data_length)
     sx = np.sort(-x, axis=1)
     d = np.diag(-x)
     d = d[:, np.newaxis]
