@@ -43,6 +43,7 @@ from src.optimization.loss import build_loss_func
 from src.utils.distributed import all_gather_list
 from src.utils.metrics import cal_cossim, compute_metrics, test_compute_metrics, compute_metrics_multi, np_softmax
 import string
+import json
 
 def mk_video_ret_dataloader(dataset_name, vis_format, anno_path, vis_dir, cfg, tokenizer, mode):
     """"""
@@ -174,22 +175,22 @@ def validate(model, val_loaders, cfg):
             if cfg.is_train:
                     v2tr1,v2tr5,v2tr10,v2tmedr,v2tmeanr = compute_metrics(sim_matrix.T)
                     t2vr1,t2vr5,t2vr10,t2vmedr,t2vmeanr = compute_metrics(sim_matrix)
-                else: # test 
-                    # emotion data index extraction  
-                    for db in cfg.inference_datasets: 
-                        indx_anno_path = db.txt
-                        with open(indx_anno_path, "r") as f:
-                            inference_indx_anno_data = json.load(f)
+            else: # test 
+                # emotion data index extraction  
+                for db in cfg.inference_datasets: 
+                    indx_anno_path = db.txt
+                    with open(indx_anno_path, "r") as f:
+                        inference_indx_anno_data = json.load(f)
 
-                    # inference_indx_anno_data[0]['emotion']
+                # inference_indx_anno_data[0]['emotion']
 
-                    # 'emotion' 값을 boolean으로 변환
-                    emotion_mask = []
-                    for item in inference_indx_anno_data:
-                        emotion_mask.append(bool(item['emotion']))
+                # 'emotion' 값을 boolean으로 변환
+                emotion_mask = []
+                for item in inference_indx_anno_data:
+                    emotion_mask.append(bool(item['emotion']))
 
-                    v2tr1,v2tr5,v2tr10,v2tmedr,v2tmeanr = test_compute_metrics(sim_matrix.T, np.array(emotion_mask))
-                    t2vr1,t2vr5,t2vr10,t2vmedr,t2vmeanr = test_compute_metrics(sim_matrix,  np.array(emotion_mask))
+                v2tr1,v2tr5,v2tr10,v2tmedr,v2tmeanr = test_compute_metrics(sim_matrix.T, np.array(emotion_mask))
+                t2vr1,t2vr5,t2vr10,t2vmedr,t2vmeanr = test_compute_metrics(sim_matrix,  np.array(emotion_mask))
 
 
 
