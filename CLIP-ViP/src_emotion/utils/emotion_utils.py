@@ -19,8 +19,8 @@ def encode_query(query, device):
         : anger, anticipation, disgust, fear, joy, sadness, surprise, trust
     """
     emotion_count = NRCLex(query).raw_emotion_scores
-    # shape: [1, 8] (1: batch, 8: emotions)
-    encoded_query = torch.zeros(1, len(emostion_list), dtype=torch.long, device=device)
+    # shape: 8 (emotions)
+    encoded_query = torch.zeros(len(emostion_list), dtype=torch.long, device=device)
     for i, emo in enumerate(emostion_list):
         if emo in emotion_count.keys():
             encoded_query[i] = emotion_count[emo]
