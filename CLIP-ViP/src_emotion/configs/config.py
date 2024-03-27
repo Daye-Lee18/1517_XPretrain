@@ -54,6 +54,7 @@ class SharedConfigs(object):
             "--data_ratio", type=float, default=1.0,
             help="portion of train/val exampels to use,"
                  "e.g., overfit a small set of data")
+        parser.add_argument('--rand', default=None, type=str)
 
         # Required parameters
         parser.add_argument(
@@ -96,7 +97,9 @@ class SharedConfigs(object):
         parser.add_argument("--frm_sampling_strategy", type=str, default="rand",
                             choices=["rand", "uniform", "start", "middle", "end"],
                             help="see src.datasets.data_utils.extract_frames_from_video_binary for details")
-
+        parser.add_argument("--is_demo", type=bool, default=False)
+        parser.add_argument("--query", type=str, default=None)
+        parser.add_argument("--is_embed", type=bool, default=False)
         # MLL training settings
         parser.add_argument("--train_n_clips", type=int, default=3,
                             help="#clips to sample from each video for MIL training")
@@ -105,7 +108,6 @@ class SharedConfigs(object):
                             help="score (from multiple clips) aggregation function, lse = LogSumExp")
         parser.add_argument("--random_sample_clips", type=int, default=1, choices=[0, 1],
                             help="randomly sample clips for training, otherwise use uniformly sampled clips.")
-
         # training parameters
         parser.add_argument("--is_train", action='store_true', help="is this for finetuning or pretraining")
         parser.add_argument(

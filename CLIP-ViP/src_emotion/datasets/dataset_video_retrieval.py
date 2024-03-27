@@ -49,6 +49,7 @@ class HDVILAVideoRetrievalDataset(Dataset):
                                           temporal_jitter=True)
         self.init_dataset_process()
 
+
     def init_dataset_process(self):
         json_type = os.path.splitext(self.anno_path)[-1]
         assert json_type in ['.json', '.jsonl']
@@ -61,6 +62,8 @@ class HDVILAVideoRetrievalDataset(Dataset):
         else:
             data = json.load(open(self.anno_path))
         self.datalist = data
+        if self.cfg.is_demo:
+            self.dir_list = os.listdir(self.vis_dir)
 
     def id2path(self, id):
         clip_name = id
@@ -73,7 +76,11 @@ class HDVILAVideoRetrievalDataset(Dataset):
         return name
 
     def __len__(self):
-        return len(self.datalist)
+        if self.cfg.is_demo:
+            # data_len = len(self.dir_list)
+            return len(self.dir_list)
+        else:
+            return len(self.datalist)
 
     def get_sample_idx(self, total_frame_num):
         """
@@ -131,40 +138,53 @@ class HDVILAVideoRetrievalDataset(Dataset):
 
         # vis_id = self.datalist[index]['clip_id']
         # texts = self.datalist[index]['text']
-        if not ("video_id" in self.datalist[index].keys()):
-            video = self.datalist[index]["video"]
+        if self.cfg.is_demo:
+            # Get the list of all files and directories 
+            # path = self.vis_dir
+            video = self.dir_list[index]
             video_id, _ = os.path.splitext(video)
             vis_id = video_id
-            texts = self.datalist[index]['caption']
+            texts = [self.cfg.query]  # for testing
+            emotions = self.cfg.emotion
+            # pdb.set_trace()
+            
         else:
-            vis_id = self.datalist[index]['video_id']
-            texts = self.datalist[index]['caption']
-        
-        # if isinstance(texts, list):
-        #     texts = random.sample(self.datalist[index]['text'], self.pos_num)
-        #     if 'didemo' in self.anno_path:
-        #         texts = [' '.join(self.datalist[index]['text'])]
-        # else:
-        #     texts = [texts]
+            if not ("video_id" in self.datalist[index].keys()):
+                video = self.datalist[index]["video"]
+                video_id, _ = os.path.splitext(video)
+                vis_id = video_id
+                texts = self.datalist[index]['caption']
+            else:
+                vis_id = self.datalist[index]['video_id']
+                texts = self.datalist[index]['caption']
+            
+            # if isinstance(texts, list):
+            #     texts = random.sample(self.datalist[index]['text'], self.pos_num)
+            #     if 'didemo' in self.anno_path:
+            #         texts = [' '.join(self.datalist[index]['text'])]
+            # else:
+            #     texts = [texts]
 
-        if isinstance(texts, list):
-            texts = random.sample(self.datalist[index]['caption'], self.pos_num)
-            if 'didemo' in self.anno_path:
-                texts = [' '.join(self.datalist[index]['caption'])]
-        else:
-            texts = [texts]
-        
-        emotions = [self.datalist[index][emotion] for emotion in ["joy", "trust", "surprise", "anticipation", "fear", "sadness", "disgust", "anger"]]
+            if isinstance(texts, list):
+                texts = random.sample(self.datalist[index]['caption'], self.pos_num)
+                if 'didemo' in self.anno_path:
+                    texts = [' '.join(self.datalist[index]['caption'])]
+            else:
+                texts = [texts]
+            
 
+        
+        # emotions = [self.datalist[index][emotion] for emotion in ["joy", "trust", "surprise", "anticipation", "fear", "sadness", "disgust", "anger"]]
+        # emotions = [0]*8
         vis_path = self.id2path(vis_id)
         video = self.load_video(vis_path) if self.vis_format=='video' else self.load_frames(vis_path, self.datalist[index]['num_frame'])     
 
         return dict(
             video = video,  # [clips*num_frm, C, H_crop, W_crop]
             texts = texts,
-            emotions = emotions
+            emotions = emotions,
+            vis_id = vis_id
         )
-
 
 
 class VideoRetrievalCollator(object):
@@ -182,6 +202,10 @@ class VideoRetrievalCollator(object):
 
         text_examples = flat_list_of_lists([d["texts"] for d in batch])
         emotions = torch.LongTensor([(d["emotions"]) for d in batch])
+        
+        # for vis_id collation
+        vid_collate = default_collate
+        vis_id = vid_collate([d["vis_id"] for d in batch])
         
         # text_str_list = flat_list_of_lists([d["texts"] for d in batch])
         # print("text_examples length: ", len(text_examples))
@@ -211,7 +235,8 @@ class VideoRetrievalCollator(object):
             video=video,   # [B, clips, num_frm, C, H_crop, W_crop]
             text_input_ids=text_input_ids,
             text_input_mask=text_input_mask,
-            emotions=emotions
+            emotions=emotions,
+            vis_id=vis_id
         )
 
         return collated_batch
