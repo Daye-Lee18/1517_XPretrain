@@ -52,6 +52,21 @@ def compute_metrics(x):
     meanr  = np.mean(ind) + 1
     return r1, r5, r10, medr, meanr
 
+def test_compute_metrics(x, emotion_mask):
+    x = x[emotion_mask] # (emotion_data, original_data_length)
+    sx = np.sort(-x, axis=1)
+    d = np.diag(-x)
+    d = d[:, np.newaxis]
+    ind = sx - d
+    ind = np.where(ind == 0)
+    ind = ind[1]
+    r1 = float(np.sum(ind == 0))  / len(ind)
+    r5 = float(np.sum(ind < 5))  / len(ind)
+    r10 = float(np.sum(ind < 10))  / len(ind)
+    medr = np.median(ind) + 1
+    meanr  = np.mean(ind) + 1
+    return r1, r5, r10, medr, meanr
+
 def compute_metrics_multi(x, t2v_labels_list):
     sx = np.sort(-x, axis=1)
     t2v_labels_list = np.array(t2v_labels_list)
