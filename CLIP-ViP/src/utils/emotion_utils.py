@@ -20,8 +20,9 @@ def encode_query(query, device):
     """
     emotion_count = NRCLex(query).raw_emotion_scores
     # shape: 8 (emotions)
-    encoded_query = torch.zeros(len(emostion_list), dtype=torch.long, device=device)
+    # encoded_query = torch.zeros(len(emostion_list), dtype=torch.long, device=device)
+    encoded_query = torch.zeros(len(emostion_list), dtype=torch.long)
     for i, emo in enumerate(emostion_list):
         if emo in emotion_count.keys():
             encoded_query[i] = emotion_count[emo]
-    return encoded_query
+    return encoded_query.tolist()
