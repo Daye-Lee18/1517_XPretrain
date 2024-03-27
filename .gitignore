@@ -70,3 +70,9 @@ coverage.xml
 
 # Sphinx documentation
 docs/_build/
+
+.DS_Store 
+.vscode/
+
+# .mp4 files
+*.mp4
