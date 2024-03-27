@@ -35,6 +35,7 @@ class VidCLIP(nn.Module):
         video [B, n_clips*num_frms, C, H, W]
         text_input_ids [B, L]
         text_input_mask [B, L]
+        emotions [B, emo_len]
         image [B, img_num, C, H, W]
         caption_ids [B, img_num, L]
         caption_masks [B, img_num, L]
