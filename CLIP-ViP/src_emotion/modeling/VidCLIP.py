@@ -2,8 +2,8 @@ import torch
 import torch.nn as nn
 from functools import partial
 from transformers.models.clip.configuration_clip import CLIPConfig, CLIPTextConfig, CLIPVisionConfig
-from src.modeling.CLIP_ViP import CLIPModel, clip_loss
-from src.modeling.CLIP import CLIPModel as CLIP
+from src_emotion.modeling.CLIP_ViP import CLIPModel, clip_loss
+from src_emotion.modeling.CLIP import CLIPModel as CLIP
 
 class VidCLIP(nn.Module):
     def __init__(self, args):
