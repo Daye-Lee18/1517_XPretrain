@@ -146,7 +146,16 @@ class HDVILAVideoRetrievalDataset(Dataset):
             vis_id = video_id
             texts = [self.cfg.query]  # for testing
             emotions = self.cfg.emotion
-            # pdb.set_trace()
+            
+            vis_path = self.id2path(vis_id)
+            video = self.load_video(vis_path) if self.vis_format=='video' else self.load_frames(vis_path, self.datalist[index]['num_frame'])     
+
+            return dict(
+            video = video,  # [clips*num_frm, C, H_crop, W_crop]
+            texts = texts,
+            emotions = emotions,
+            vis_id = vis_id
+            )
             
         else:
             if not ("video_id" in self.datalist[index].keys()):
@@ -174,15 +183,14 @@ class HDVILAVideoRetrievalDataset(Dataset):
             
             emotions = [self.datalist[index][emotion] for emotion in ["joy", "trust", "surprise", "anticipation", "fear", "sadness", "disgust", "anger"]]
         
-        vis_path = self.id2path(vis_id)
-        video = self.load_video(vis_path) if self.vis_format=='video' else self.load_frames(vis_path, self.datalist[index]['num_frame'])     
+            vis_path = self.id2path(vis_id)
+            video = self.load_video(vis_path) if self.vis_format=='video' else self.load_frames(vis_path, self.datalist[index]['num_frame'])     
 
-        return dict(
-            video = video,  # [clips*num_frm, C, H_crop, W_crop]
-            texts = texts,
-            emotions = emotions,
-            vis_id = vis_id
-        )
+            return dict(
+                video = video,  # [clips*num_frm, C, H_crop, W_crop]
+                texts = texts,
+                emotions = emotions,
+                )
 
 
 class VideoRetrievalCollator(object):
