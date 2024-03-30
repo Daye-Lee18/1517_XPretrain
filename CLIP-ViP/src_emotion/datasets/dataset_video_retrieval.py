@@ -172,10 +172,8 @@ class HDVILAVideoRetrievalDataset(Dataset):
             else:
                 texts = [texts]
             
-
+            emotions = [self.datalist[index][emotion] for emotion in ["joy", "trust", "surprise", "anticipation", "fear", "sadness", "disgust", "anger"]]
         
-        # emotions = [self.datalist[index][emotion] for emotion in ["joy", "trust", "surprise", "anticipation", "fear", "sadness", "disgust", "anger"]]
-        # emotions = [0]*8
         vis_path = self.id2path(vis_id)
         video = self.load_video(vis_path) if self.vis_format=='video' else self.load_frames(vis_path, self.datalist[index]['num_frame'])     
 
