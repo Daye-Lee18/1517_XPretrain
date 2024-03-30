@@ -22,6 +22,7 @@ import src.utils.stop_words as stop_words
 from PIL import Image
 from src.datasets.sample_frames import SampleFrames
 
+
 class HDVILAVideoRetrievalDataset(Dataset):
     """
     datalist
@@ -209,21 +210,8 @@ class VideoRetrievalCollator(object):
         text_examples = flat_list_of_lists([d["texts"] for d in batch])
         emotions = torch.LongTensor([(d["emotions"]) for d in batch])
         
-        # for vis_id collation
-        vid_collate = default_collate
-        vis_id = vid_collate([d["vis_id"] for d in batch])
-        
-        # text_str_list = flat_list_of_lists([d["texts"] for d in batch])
-        # print("text_examples length: ", len(text_examples))
-        # print("text_examples: ", text_examples)
-        # print("text_examples type: ", type(text_examples))
         text_str_list = [d for d in text_examples]  # (B, )
-        # print("text_str_list length: ", len(text_str_list))
-        # print("text_str_list: ", text_str_list[0])
-        # print("text_str_list type: ", type(text_str_list))
-        # print("text_str_list: ", text_str_list)
-        # print("classes_examples: ", classes_examples)
-        # quit()
+
         batch_enc = self.tokenizer.batch_encode_plus(
             text_str_list,
             max_length=self.max_length,
@@ -233,10 +221,49 @@ class VideoRetrievalCollator(object):
         )
         text_input_ids = batch_enc.input_ids  # (B, L)
         text_input_mask = batch_enc.attention_mask  # (B, L)
-        # print("text_input_ids: ", text_input_ids)
-        # print("text_input_mask: ", text_input_mask[0])
-        # quit()
+        
+        collated_batch = dict(
+            video=video,   # [B, clips, num_frm, C, H_crop, W_crop]
+            text_input_ids=text_input_ids,
+            text_input_mask=text_input_mask,
+            emotions=emotions
+        )
 
+        return collated_batch
+
+
+class DemoVideoRetrievalCollator(object):
+    def __init__(self, tokenizer, max_length=40, is_train=True):
+        self.tokenizer = tokenizer
+        self.max_length = max_length
+        self.is_train = is_train
+
+    def collate_batch(self, batch):
+        if isinstance(batch[0]["video"], torch.Tensor):
+            v_collate = default_collate
+        else:
+            v_collate = img_collate
+        video = v_collate([d["video"] for d in batch])
+
+        text_examples = flat_list_of_lists([d["texts"] for d in batch])
+        emotions = torch.LongTensor([(d["emotions"]) for d in batch])
+        
+        # for vis_id collation
+        vid_collate = default_collate
+        vis_id = vid_collate([d["vis_id"] for d in batch])
+        
+        text_str_list = [d for d in text_examples]  # (B, )
+
+        batch_enc = self.tokenizer.batch_encode_plus(
+            text_str_list,
+            max_length=self.max_length,
+            padding="max_length",
+            truncation=True,
+            return_tensors="pt"
+        )
+        text_input_ids = batch_enc.input_ids  # (B, L)
+        text_input_mask = batch_enc.attention_mask  # (B, L)
+        
         collated_batch = dict(
             video=video,   # [B, clips, num_frm, C, H_crop, W_crop]
             text_input_ids=text_input_ids,
