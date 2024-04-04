@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 
+# FIRST ARGUMENT: DATA_DIR
+DATA_DIR=$1
+# SAVE PATH
+OUT_DIR="${DATA_DIR}/msrvtt/videos_6fps"
+
 FPS=6
 SIZE=224
-DATA_DIR="./data/msrvtt"
-OUT_DIR="./data/msrvtt/videos_6fps"
 
 python compress.py \
     --input_root=${DATA_DIR} --output_root=${OUT_DIR} \

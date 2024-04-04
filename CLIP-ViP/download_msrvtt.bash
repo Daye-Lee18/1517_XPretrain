@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-DATA_DIR="./data/msrvtt"
+DATA_DIR=$1
 mkdir -p ${DATA_DIR}
 
 if [ -f "MSRVTT.zip" ]; then
